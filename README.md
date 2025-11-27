@@ -4,6 +4,8 @@ Web-based editor for Bitburner save files. Upload your save (JSON/base64 or gzip
 
 > Note: The code in this fork has been produced entirely via AI assistance under human guidance; the maintainer has not manually authored or deeply reviewed every change. If you file any issues or comments please do so with that context in mind.
 
+> Compatibility: Verified with Bitburner Steam version 2.8.1 save files. Other game versions have not been tested.
+
 ## Usage
 
 https://redmega.github.io/bitburner-save-editor/
