@@ -8,9 +8,11 @@ Web-based editor for Bitburner save files. Upload your save (JSON/base64 or gzip
 
 ## Usage
 
-https://redmega.github.io/bitburner-save-editor/
-
-Open the save editor and upload your exported Bitburner save file. When you're done editing, you can click the download icon in the header to get a new version of your save that you can import to the game.
+1. Install dependencies: `npm install`
+2. Start the app locally: `npm start` (runs on http://localhost:3000 by default)
+3. In the app, upload your exported Bitburner save (JSON, base64, or gzipped).
+4. Edit sections as needed (player, factions, companies, servers, augmentations).
+5. Download the modified save and import it back into Bitburner.
 
 ## TODO
 
