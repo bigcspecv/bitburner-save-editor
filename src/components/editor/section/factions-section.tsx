@@ -7,6 +7,7 @@ import {
   PropsWithChildren,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -36,6 +37,12 @@ export default observer(function FactionSection({ isFiltering }: Props) {
   const [filters, setFilters] = useState<Partial<Bitburner.FactionsSaveObject["data"]>>({
     playerReputation: -1,
   });
+
+  // Create a map of original faction data for easy lookup
+  const originalFactionsMap = useMemo(() => {
+    if (!factions?.originalData) return new Map();
+    return new Map(factions.originalData);
+  }, [factions?.originalData]);
 
   const filteredFactions = useMemo(() => {
     if (!factions || !factions.data || factions.data.length === 0) {
@@ -157,7 +164,13 @@ export default observer(function FactionSection({ isFiltering }: Props) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 grid-flow-row gap-4">
           {filteredFactions.map(([faction, factionData]) => (
-            <Faction key={faction} id={faction} faction={factionData} onSubmit={onSubmit} />
+            <Faction
+              key={faction}
+              id={faction}
+              faction={factionData}
+              originalFaction={originalFactionsMap.get(faction)?.data}
+              onSubmit={onSubmit}
+            />
           ))}
         </div>
       )}
@@ -168,12 +181,41 @@ export default observer(function FactionSection({ isFiltering }: Props) {
 interface FactionProps extends PropsWithChildren<{}> {
   id: string;
   faction: Bitburner.FactionsSaveObject;
+  originalFaction?: Bitburner.FactionsSaveObject["data"];
   onSubmit(key: string, value: Partial<Bitburner.FactionsSaveObject["data"]>): void;
 }
 
-const Faction = function Faction({ id, faction, onSubmit }: FactionProps) {
+const Faction = function Faction({ id, faction, originalFaction, onSubmit }: FactionProps) {
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState(faction?.data ? Object.assign({}, faction.data) : {} as any);
+
+  // Reset local state when faction data changes (e.g., after revert)
+  useEffect(() => {
+    if (faction?.data) {
+      setState(Object.assign({}, faction.data));
+    }
+  }, [faction]);
+
+  // Check if faction has changed from original
+  const hasChanged = useMemo(() => {
+    if (!originalFaction) return false;
+    return JSON.stringify(faction.data) !== JSON.stringify(originalFaction);
+  }, [originalFaction, faction]);
+
+  const handleRevert = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (originalFaction) {
+      // Submit all properties to ensure proper cleanup
+      onSubmit(id, {
+        playerReputation: originalFaction.playerReputation,
+        favor: originalFaction.favor,
+        isBanned: originalFaction.isBanned,
+        alreadyInvited: originalFaction.alreadyInvited,
+        isMember: originalFaction.isMember,
+      });
+      setState(Object.assign({}, originalFaction));
+    }
+  }, [originalFaction, id, onSubmit]);
 
   const onClickEnter = useCallback<MouseEventHandler<HTMLDivElement>>((event) => {
     setEditing(true);
@@ -188,15 +230,22 @@ const Faction = function Faction({ id, faction, onSubmit }: FactionProps) {
 
   const onStatusChange = useCallback<ChangeEventHandler<HTMLSelectElement>>((event) => {
     const { value } = event.currentTarget;
-    setState((s: any) => ({
-      ...s,
+    const newState = {
+      ...state,
       alreadyInvited: value === "invited",
       isMember: value === "joined"
-    }));
+    };
+    setState(newState);
+
+    // Immediately persist the change to the store
+    onSubmit(id, {
+      alreadyInvited: newState.alreadyInvited,
+      isMember: newState.isMember,
+    });
 
     // Stop propagation to prevent triggering the parent onClick when in collapsed mode
     event.stopPropagation();
-  }, []);
+  }, [state, id, onSubmit]);
 
   const onClose = useCallback<FormEventHandler>(
     (event) => {
@@ -222,7 +271,6 @@ const Faction = function Faction({ id, faction, onSubmit }: FactionProps) {
   }
 
   // Determine membership status for display
-  const membershipStatus = state.isMember ? "Joined" : state.alreadyInvited ? "Invited" : "None";
   const radioValue = state.isMember ? "joined" : state.alreadyInvited ? "invited" : "none";
 
   // @TODO: Display Augmentations
@@ -230,19 +278,42 @@ const Faction = function Faction({ id, faction, onSubmit }: FactionProps) {
     <>
       <div
         className={clsx(
-          "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-2 rounded border shadow shadow-green-700 border-gray-700 hover:bg-gray-800  focus-within:bg-gray-800 row-span-2 overflow-hidden",
+          "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-2 rounded border shadow row-span-2 overflow-hidden",
+          hasChanged ? "border-yellow-500 shadow-yellow-700" : "border-gray-700 shadow-green-700",
+          "hover:bg-gray-800 focus-within:bg-gray-800",
           editing ? "z-20 h-auto" : "h-10"
         )}
         onClick={!editing ? onClickEnter : undefined}
       >
         <form className="grid grid-cols-3 gap-1" data-id="faction-section" onSubmit={onClose}>
-          <header className="col-span-2 flex items-baseline justify-between">
+          <header className={clsx("flex items-baseline justify-between", editing ? "col-span-3" : "col-span-2")}>
             <h3 className="tracking-wide text-green-100">{faction.data.name}</h3>
+            {hasChanged && editing && (
+              <button
+                type="button"
+                onClick={handleRevert}
+                className="px-2 py-0.5 text-xs rounded bg-yellow-600 hover:bg-yellow-500 text-white"
+                title="Reset to original value"
+              >
+                Reset
+              </button>
+            )}
           </header>
-          <label
-            className={clsx("flex items-center gap-2", editing ? "col-span-3 mb-2" : "ml-auto")}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className={clsx("flex items-center gap-1", editing ? "col-span-3 mb-2" : "ml-auto")}>
+            {hasChanged && !editing && (
+              <button
+                type="button"
+                onClick={handleRevert}
+                className="px-2 py-0.5 text-xs rounded bg-yellow-600 hover:bg-yellow-500 text-white whitespace-nowrap"
+                title="Reset to original value"
+              >
+                Reset
+              </button>
+            )}
+            <label
+              className={clsx("flex items-center gap-2", editing && "flex-1")}
+              onClick={(e) => e.stopPropagation()}
+            >
             {editing && <span className="text-sm text-slate-300">Status:</span>}
             <select
               value={radioValue}
@@ -258,7 +329,8 @@ const Faction = function Faction({ id, faction, onSubmit }: FactionProps) {
               <option value="invited" className="bg-gray-900 text-slate-100">Invited</option>
               <option value="joined" className="bg-gray-900 text-slate-100">Joined</option>
             </select>
-          </label>
+            </label>
+          </div>
           <label className="col-span-2 flex items-center">
             <span className="mr-1">Reputation: </span>
             {editing && (

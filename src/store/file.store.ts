@@ -48,13 +48,14 @@ export class FileStore {
   };
 
   get factions() {
-    return {
-      data: Object.entries(this.save.data.FactionsSave).map(([name, factionData]) => {
+    // Helper to parse faction data
+    const parseFactionsData = (save: Bitburner.SaveData) => {
+      return Object.entries(save.data.FactionsSave).map(([name, factionData]) => {
         // Handle both old format (with nested .data) and new format (flat object)
         const data = (factionData as any).data || factionData;
 
         // In 2.8.1+, membership/invitation status is stored in player data, not faction data
-        const playerData = this.save.data.PlayerSave.data;
+        const playerData = save.data.PlayerSave.data;
         const isMember = playerData.factions?.includes(name) ?? data.isMember ?? false;
         const alreadyInvited = playerData.factionInvitations?.includes(name) ?? data.alreadyInvited ?? false;
 
@@ -79,42 +80,135 @@ export class FileStore {
           const repB = b[1]?.data?.playerReputation ?? 0;
           return repB - repA;
         }
-      ) as [string, Bitburner.FactionsSaveObject][],
+      ) as [string, Bitburner.FactionsSaveObject][];
+    };
+
+    return {
+      data: parseFactionsData(this.save),
+      originalData: this.originalSave ? parseFactionsData(this.originalSave) : [],
       updateFaction: this.updateFaction,
     };
   }
 
   updateFaction = (faction: string, updates: Partial<Bitburner.FactionsSaveObject["data"]>) => {
-    const factionData = this.save.data.FactionsSave[faction] as any;
+    runInAction(() => {
+      const factionData = this.save.data.FactionsSave[faction] as any;
 
-    // Handle both old format (with nested .data) and new format (flat object)
-    if (factionData.data) {
-      // Old format
-      Object.assign(factionData.data, updates);
-    } else {
-      // New format - update the flat object directly
-      Object.assign(factionData, updates);
-    }
+      // Get the target object (handle both old format with nested .data and new format)
+      const target = factionData.data || factionData;
 
-    if (updates.isMember !== undefined) {
-      const playerFactions = (this.player.data as any).factions || this.player.data.factions;
-      if (updates.isMember) {
-        this.updatePlayer({ factions: Array.from(new Set(playerFactions.concat(faction))) });
-      } else {
-        this.updatePlayer({ factions: playerFactions.filter((f: string) => f !== faction) });
+      // Get the original faction data to check what properties existed originally
+      const originalFactionData = this.originalSave.data.FactionsSave[faction] as any;
+      const originalTarget = originalFactionData?.data || originalFactionData || {};
+
+      // Filter out properties that shouldn't be added
+      const filteredUpdates: any = {};
+      let deleted = false;
+
+      Object.keys(updates).forEach(key => {
+        const typedKey = key as keyof typeof updates;
+        const value = updates[typedKey];
+
+        // Only include properties that have values or already exist in the target
+        // Don't add false values for isMember/alreadyInvited if they don't exist
+        if (key === 'isMember' || key === 'alreadyInvited' || key === 'isBanned') {
+          if (value === true) {
+            // Only persist explicit true if it existed before; otherwise rely on player arrays
+            if (originalTarget[typedKey] !== undefined || target[typedKey] !== undefined) {
+              filteredUpdates[key] = true;
+            }
+          } else if (value === false) {
+            if (originalTarget[typedKey] !== undefined) {
+              // Keep explicit false if it existed in the original save
+              filteredUpdates[key] = false;
+            } else if (target[typedKey] !== undefined) {
+              // Remove keys that weren't originally present
+              delete target[typedKey];
+              deleted = true;
+            }
+          }
+        } else if (key === 'playerReputation' || key === 'favor') {
+          if (value === undefined) {
+            return;
+          }
+          // For numeric values, only add if non-zero or if existed in the original data
+          if (value === 0 && originalTarget[typedKey] === undefined) {
+            if (target[typedKey] !== undefined) {
+              delete target[typedKey];
+              deleted = true;
+            }
+            return;
+          }
+          filteredUpdates[key] = value;
+        } else {
+          filteredUpdates[key] = value;
+        }
+      });
+
+      // Only assign properties that have actually changed
+      const hasChanges = deleted || Object.keys(filteredUpdates).some(key => {
+        const typedKey = key as keyof typeof filteredUpdates;
+        return target[typedKey] !== filteredUpdates[typedKey];
+      });
+
+      if (hasChanges) {
+        Object.assign(target, filteredUpdates);
       }
-    }
 
-    if (updates.alreadyInvited !== undefined) {
-      const playerInvitations = (this.player.data as any).factionInvitations || this.player.data.factionInvitations;
-      if (updates.alreadyInvited && !updates.isMember) {
-        this.updatePlayer({
-          factionInvitations: Array.from(new Set(playerInvitations.concat(faction))),
-        });
-      } else {
-        this.updatePlayer({ factionInvitations: playerInvitations.filter((f: string) => f !== faction) });
+      if (updates.isMember !== undefined) {
+        const playerFactions = (this.player.data as any).factions || this.player.data.factions || [];
+        const originalFactions = (this.originalSave?.data.PlayerSave?.data as any)?.factions || [];
+        const currentlyMember = playerFactions.includes(faction);
+        const insertAtOriginalIndex = (arr: string[], item: string, originalArr: string[]) => {
+          const withoutItem = arr.filter((f) => f !== item);
+          const originalIndex = originalArr.indexOf(item);
+          if (originalIndex === -1 || originalIndex >= withoutItem.length) {
+            return withoutItem.concat(item);
+          }
+          const next = withoutItem.slice();
+          next.splice(originalIndex, 0, item);
+          return next;
+        };
+
+        // Only update if the membership status is actually changing
+        if (updates.isMember !== currentlyMember) {
+          if (updates.isMember) {
+            this.updatePlayer({
+              factions: insertAtOriginalIndex(Array.from(new Set(playerFactions)), faction, originalFactions),
+            });
+          } else {
+            this.updatePlayer({ factions: playerFactions.filter((f: string) => f !== faction) });
+          }
+        }
       }
-    }
+
+      if (updates.alreadyInvited !== undefined) {
+        const playerInvitations = (this.player.data as any).factionInvitations || this.player.data.factionInvitations || [];
+        const originalInvitations = (this.originalSave?.data.PlayerSave?.data as any)?.factionInvitations || [];
+        const currentlyInvited = playerInvitations.includes(faction);
+        const insertAtOriginalIndex = (arr: string[], item: string, originalArr: string[]) => {
+          const withoutItem = arr.filter((f) => f !== item);
+          const originalIndex = originalArr.indexOf(item);
+          if (originalIndex === -1 || originalIndex >= withoutItem.length) {
+            return withoutItem.concat(item);
+          }
+          const next = withoutItem.slice();
+          next.splice(originalIndex, 0, item);
+          return next;
+        };
+
+        // Only update if the invitation status is actually changing
+        if (updates.alreadyInvited !== currentlyInvited) {
+          if (updates.alreadyInvited && !updates.isMember) {
+            this.updatePlayer({
+              factionInvitations: insertAtOriginalIndex(Array.from(new Set(playerInvitations)), faction, originalInvitations),
+            });
+          } else {
+            this.updatePlayer({ factionInvitations: playerInvitations.filter((f: string) => f !== faction) });
+          }
+        }
+      }
+    });
   };
 
   get companies() {
