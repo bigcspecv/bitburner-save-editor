@@ -203,10 +203,10 @@ const Company = function Company({ id, company, originalCompany, onSubmit }: Com
     <>
       <div
         className={clsx(
-          "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-2 rounded border shadow row-span-2 h-10 overflow-hidden",
+          "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-2 rounded border shadow row-span-2 overflow-hidden",
           hasChanged ? "border-yellow-500 shadow-yellow-700" : "border-gray-700 shadow-green-700",
           "hover:bg-gray-800 focus-within:bg-gray-800",
-          editing && "z-20 h-auto",
+          editing ? "z-20 h-auto" : "h-10",
           hasValues && !editing && "bg-gray-800/50"
         )}
         onClick={!editing ? onClickEnter : undefined}

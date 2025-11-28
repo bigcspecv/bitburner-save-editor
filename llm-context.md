@@ -253,6 +253,7 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **MobX Reactivity**: All state mutations must use `runInAction()` or MobX action methods
 - **Type Safety**: TypeScript strict mode is enabled, but uses `any` in some places for flexibility
 - **No Backend**: This is a pure client-side application - all processing happens in the browser
+- **Line Endings**: This project uses CRLF (Windows-style) line endings. Ensure git is configured to preserve them (`core.autocrlf=true` or `core.autocrlf=input` depending on OS)
 
 ## Example Usage Flow
 
@@ -305,3 +306,5 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **2025-11-27** - NeuroFlux Governor levels now use shared NumberInput (with increment/decrement controls) min=0, no max
 - **2025-11-27** - Player tab filter toggle hidden (placeholder button removed; TODO left to restore/remove if filters added)
 - **2025-11-27** - Split monolithic `bitburner.types.ts` into `bitburner/` barrel with `types.ts` and `data/` modules; legacy `bitburner.types.ts` now re-exports the barrel
+- **2025-11-28** - Fixed collapse/expand functionality in all section components (companies, servers, factions, jobs) by making height conditional (`editing ? "h-auto" : "h-10"`) to avoid Tailwind CSS class conflicts
+- **2025-11-28** - Fixed Bitburner namespace runtime export: `bitburner/index.ts` now properly re-exports the namespace and uses `Object.assign()` to extend it with game data constants

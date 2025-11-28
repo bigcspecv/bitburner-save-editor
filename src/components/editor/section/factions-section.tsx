@@ -230,8 +230,8 @@ const Faction = function Faction({ id, faction, onSubmit }: FactionProps) {
     <>
       <div
         className={clsx(
-          "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-2 rounded border shadow shadow-green-700 border-gray-700 hover:bg-gray-800  focus-within:bg-gray-800 row-span-2 h-10 overflow-hidden",
-          editing && "z-20 h-auto"
+          "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-2 rounded border shadow shadow-green-700 border-gray-700 hover:bg-gray-800  focus-within:bg-gray-800 row-span-2 overflow-hidden",
+          editing ? "z-20 h-auto" : "h-10"
         )}
         onClick={!editing ? onClickEnter : undefined}
       >
