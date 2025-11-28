@@ -16,7 +16,6 @@ type SectionKey =
   | "general"
   | "stats"
   | "augmentations"
-  | "factions"
   | "jobs"
   | "hacknet"
   | "location"
@@ -41,7 +40,7 @@ export default observer(function PlayerSection() {
     { key: "general", label: "General" },
     { key: "stats", label: "Stats & Skills" },
     { key: "augmentations", label: "Augmentations" },
-    { key: "factions", label: "Factions & Jobs" },
+    { key: "jobs", label: "Jobs" },
     { key: "hacknet", label: "Hacknet" },
     { key: "location", label: "Location & Servers" },
     { key: "progression", label: "Progression" },
@@ -94,7 +93,7 @@ export default observer(function PlayerSection() {
       case "augmentations":
         return <AugmentationsSection isFiltering={true} />;
 
-      case "factions":
+      case "jobs":
         return <JobsSection isFiltering={true} />;
 
       case "general":
