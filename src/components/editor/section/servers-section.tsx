@@ -373,6 +373,7 @@ const Server = function Server({ hostname, server, originalServer, onSubmit, sel
                 checked={selected}
                 onChange={onCheckboxChange}
                 className="cursor-pointer"
+                stopPropagation
               />
               <h3 className={clsx("tracking-wide", isModified ? "text-green-300" : "text-green-100")}>
                 {hostname}

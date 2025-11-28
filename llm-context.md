@@ -308,3 +308,5 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **2025-11-27** - Split monolithic `bitburner.types.ts` into `bitburner/` barrel with `types.ts` and `data/` modules; legacy `bitburner.types.ts` now re-exports the barrel
 - **2025-11-28** - Fixed collapse/expand functionality in all section components (companies, servers, factions, jobs) by making height conditional (`editing ? "h-auto" : "h-10"`) to avoid Tailwind CSS class conflicts
 - **2025-11-28** - Fixed Bitburner namespace runtime export: `bitburner/index.ts` now properly re-exports the namespace and uses `Object.assign()` to extend it with game data constants
+- **2025-11-28** - Checkbox component now uses an invisible overlay input instead of a hidden input so clicks toggle correctly (fixes unresponsive checkboxes across sections, including Servers)
+- **2025-11-28** - Added optional `stopPropagation` to Checkbox and now stop propagation on the label/input to keep collapsed cards from opening when toggling selection (Servers)
