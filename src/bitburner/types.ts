@@ -139,7 +139,7 @@ export namespace Bitburner {
     };
   }
 
-  interface HacknetNodeSaveObject extends SaveObject<Ctor.HacknetNode> {
+  export interface HacknetNodeSaveObject extends SaveObject<Ctor.HacknetNode> {
     data: {
       cores: number;
       level: number;
@@ -151,7 +151,7 @@ export namespace Bitburner {
     };
   }
 
-  interface HashManagerSaveObject extends SaveObject<Ctor.HashManager> {
+  export interface HashManagerSaveObject extends SaveObject<Ctor.HashManager> {
     data: {
       capacity: number;
       hashes: number;

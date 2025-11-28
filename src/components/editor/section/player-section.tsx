@@ -12,6 +12,7 @@ import JobsSection from "./jobs-section";
 import PlayerLocationSection from "./player-location-section";
 import { NotImplemented } from "../not-implemented";
 import { ExclamationCircleIcon } from "@heroicons/react/solid";
+import PlayerHacknetSection from "./player-hacknet-section";
 
 export type PlayerDataKey = keyof Bitburner.PlayerSaveObject["data"];
 
@@ -85,7 +86,7 @@ export default observer(function PlayerSection() {
     { key: "meta", label: "Factions & Flags" },
   ];
 
-  const NOT_IMPLEMENTED_TABS: SectionKey[] = ["general", "hacknet", "progression", "finance", "meta"];
+  const NOT_IMPLEMENTED_TABS: SectionKey[] = ["general", "progression", "finance", "meta"];
 
   const renderSection = () => {
     switch (activeSection) {
@@ -147,15 +148,7 @@ export default observer(function PlayerSection() {
         );
 
       case "hacknet":
-        return (
-          <NotImplemented>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              {PLACEHOLDER_FIELDS.hacknet.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </NotImplemented>
-        );
+        return <PlayerHacknetSection />;
 
       case "location":
         return <PlayerLocationSection />;

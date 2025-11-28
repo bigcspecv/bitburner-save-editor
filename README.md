@@ -29,7 +29,9 @@ Web-based editor for Bitburner save files. Upload your save (JSON/base64 or gzip
     - [x] Filter by effect type (hacking, combat stats, reputation, etc.)
   - [x] Jobs
   - [x] location & servers
-  - [ ] hacknet
+  - [x] hacknet
+    - [x] hacknet nodes
+    - [ ] hash manager
   - [ ] progression
   - [ ] stock
   - [ ] feature flags

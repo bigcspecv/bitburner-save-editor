@@ -44,6 +44,24 @@ export class FileStore {
     };
   }
 
+  get hacknet() {
+    const playerData = this.save?.data.PlayerSave?.data;
+    const originalPlayerData = this.originalSave?.data.PlayerSave?.data;
+    return {
+      nodes: playerData?.hacknetNodes ?? [],
+      originalNodes: originalPlayerData?.hacknetNodes ?? [],
+      hashManager: playerData?.hashManager,
+      originalHashManager: originalPlayerData?.hashManager,
+      updateNode: this.updateHacknetNode,
+      addNode: this.addHacknetNode,
+      deleteNode: this.deleteHacknetNode,
+      resetNode: this.resetHacknetNode,
+      resetNodes: this.resetHacknetNodes,
+      updateHashManager: this.updateHashManager,
+      resetHashManager: this.resetHashManager,
+    };
+  }
+
   updatePlayer = (updates: Partial<Bitburner.PlayerSaveObject["data"]>) => {
     Object.assign(this.save.data.PlayerSave.data, updates);
   };
@@ -405,6 +423,166 @@ export class FileStore {
         });
       }
 
+    });
+  };
+
+  updateHacknetNode = (index: number, updates: Partial<Bitburner.HacknetNodeSaveObject["data"]>) => {
+    if (!this.save?.data.PlayerSave?.data) return;
+    runInAction(() => {
+      if (!this.save.data.PlayerSave.data.hacknetNodes) {
+        this.save.data.PlayerSave.data.hacknetNodes = [];
+      }
+      const nodes = this.save.data.PlayerSave.data.hacknetNodes as any[];
+      if (!nodes[index]) return;
+      const node = nodes[index];
+      const target = (node as any).data || node;
+      const merged = { ...target, ...updates };
+      if ((node as any).data) {
+        (node as any).data = merged;
+      } else {
+        nodes[index] = merged;
+      }
+    });
+  };
+
+  addHacknetNode = () => {
+    if (!this.save?.data.PlayerSave?.data) return;
+    runInAction(() => {
+      if (!this.save.data.PlayerSave.data.hacknetNodes) {
+        this.save.data.PlayerSave.data.hacknetNodes = [];
+      }
+      const nodes = this.save.data.PlayerSave.data.hacknetNodes as (Bitburner.HacknetNodeSaveObject | string)[];
+      const existingNames = nodes
+        .map((node) => (typeof node === "string" ? node : (node as any).data?.name || (node as any).name))
+        .filter(Boolean) as string[];
+      let nextIndex = nodes.length;
+      let candidate = `hacknet-node-${nextIndex}`;
+      const lowerExisting = new Set(existingNames.map((n) => n.toLowerCase()));
+      while (lowerExisting.has(candidate.toLowerCase())) {
+        nextIndex += 1;
+        candidate = `hacknet-node-${nextIndex}`;
+      }
+      nodes.push({
+        ctor: Bitburner.Ctor.HacknetNode,
+        data: {
+          name: candidate,
+          level: 1,
+          ram: 1,
+          cores: 1,
+          moneyGainRatePerSecond: 0,
+          onlineTimeSeconds: 0,
+          totalMoneyGenerated: 0,
+        },
+      });
+    });
+  };
+
+  deleteHacknetNode = (index: number) => {
+    if (!this.save?.data.PlayerSave?.data?.hacknetNodes) return;
+    runInAction(() => {
+      if (index >= 0 && index < this.save.data.PlayerSave.data.hacknetNodes.length) {
+        this.save.data.PlayerSave.data.hacknetNodes.splice(index, 1);
+      }
+    });
+  };
+
+  resetHacknetNode = (index: number) => {
+    const originalNodes = this.originalSave?.data.PlayerSave?.data?.hacknetNodes;
+    if (!this.save?.data.PlayerSave?.data?.hacknetNodes) return;
+    runInAction(() => {
+      const nodes = this.save.data.PlayerSave.data.hacknetNodes;
+      const current = nodes[index];
+      const currentName =
+        typeof current === "string" ? current : (current as any)?.data?.name || (current as any)?.name || undefined;
+
+      let replacement: any;
+
+      if (originalNodes) {
+        const matched = currentName
+          ? originalNodes.find((node) => {
+              const name = typeof node === "string" ? node : (node as any)?.data?.name || (node as any)?.name || "";
+              return name === currentName;
+            })
+          : undefined;
+
+        if (matched !== undefined) {
+          replacement = JSON.parse(JSON.stringify(matched));
+        } else if (index < originalNodes.length) {
+          replacement = JSON.parse(JSON.stringify(originalNodes[index]));
+        }
+      }
+
+      if (replacement !== undefined) {
+        nodes[index] = replacement;
+      } else if (index >= 0 && index < nodes.length) {
+        nodes.splice(index, 1);
+      }
+    });
+  };
+
+  resetHacknetNodes = () => {
+    if (!this.save?.data.PlayerSave?.data) return;
+    runInAction(() => {
+      const originalNodes = this.originalSave?.data.PlayerSave?.data?.hacknetNodes;
+      if (originalNodes) {
+        this.save.data.PlayerSave.data.hacknetNodes = JSON.parse(JSON.stringify(originalNodes));
+      } else {
+        this.save.data.PlayerSave.data.hacknetNodes = [];
+      }
+    });
+  };
+
+  updateHashManager = (updates: Partial<Bitburner.HashManagerSaveObject["data"]>) => {
+    if (!this.save?.data.PlayerSave?.data) return;
+    runInAction(() => {
+      let hashManager: any = this.save.data.PlayerSave.data.hashManager;
+      if (!hashManager) {
+        hashManager = {
+          ctor: Bitburner.Ctor.HashManager,
+          data: {
+            capacity: 0,
+            hashes: 0,
+            upgrades: {},
+          },
+        };
+        this.save.data.PlayerSave.data.hashManager = hashManager;
+      }
+      const originalHashManager = (this.originalSave?.data.PlayerSave?.data as any)?.hashManager;
+      const originalData = (originalHashManager as any)?.data || originalHashManager || {};
+      const target = hashManager.data || hashManager;
+      const merged: any = { ...target, ...updates };
+      if (updates.upgrades) {
+        merged.upgrades = { ...(target.upgrades || {}), ...updates.upgrades };
+        Object.keys(merged.upgrades).forEach((key) => {
+          if (merged.upgrades[key] === 0 && originalData?.upgrades?.[key] === undefined) {
+            delete merged.upgrades[key];
+          }
+        });
+      }
+      if (hashManager.data) {
+        hashManager.data = merged;
+      } else {
+        this.save.data.PlayerSave.data.hashManager = merged;
+      }
+    });
+  };
+
+  resetHashManager = () => {
+    if (!this.save?.data.PlayerSave?.data) return;
+    runInAction(() => {
+      const originalHashManager = this.originalSave?.data.PlayerSave?.data?.hashManager;
+      if (originalHashManager !== undefined) {
+        this.save.data.PlayerSave.data.hashManager = JSON.parse(JSON.stringify(originalHashManager));
+      } else {
+        this.save.data.PlayerSave.data.hashManager = {
+          ctor: Bitburner.Ctor.HashManager,
+          data: {
+            capacity: 0,
+            hashes: 0,
+            upgrades: {},
+          },
+        };
+      }
     });
   };
 

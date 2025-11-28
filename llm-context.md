@@ -327,4 +327,5 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **2025-11-28** - Navigation tabs now show a yellow "not implemented" icon for unbuilt sections (main editor tabs and unimplemented player subtabs)
 - **2025-11-28** - Top editor tabs now show human-readable labels (Player, Factions, Companies, Servers, etc.) instead of SaveDataKey enum names
 - **2025-11-28** - Implemented Player Location & Servers subtab (city/location editors, current server suggestions, purchased server list synced with `purchasedByPlayer` flags)
+- **2025-11-29** - Implemented Player Hacknet subtab (edit/add/delete/reset nodes and hash manager; nodes normalized with defaults for missing fields; HashManager upgrade zeros trimmed if they weren't present in the original save)
 - **2025-11-29** - Reset pattern reminder: add store-level reset helpers that deep-clone original data and reconcile cross-entity links (e.g., purchased servers list + server flags) to clear `hasChanges` accurately; expose helpers via context
