@@ -243,7 +243,6 @@ export class FileStore {
       const serversData = this.save.data.AllServersSave;
 
       if (!serversData[hostname]) {
-        console.warn(`Server ${hostname} not found in save data`);
         return;
       }
 
@@ -360,29 +359,16 @@ export class FileStore {
       this.setSaveData(saveData);
 
       if (this.modifiedSave.data.PlayerSave && this.modifiedSave.data.PlayerSave.data && !this.modifiedSave.data.PlayerSave.data.exploits.includes(Bitburner.Exploit.EditSaveFile)) {
-        console.info("Applying EditSaveFile exploit!");
         this.modifiedSave.data.PlayerSave.data.exploits.push(Bitburner.Exploit.EditSaveFile);
       }
 
-      // Log original NeuroFlux data for debugging
-      const origInstalledNeuroFlux = this.originalSave.data.PlayerSave.data.augmentations?.filter((a: any) => a.name === "NeuroFlux Governor") || [];
-      const origQueuedNeuroFlux = this.originalSave.data.PlayerSave.data.queuedAugmentations?.filter((a: any) => a.name === "NeuroFlux Governor") || [];
-      console.info(`ORIGINAL FILE - Installed NeuroFlux: ${origInstalledNeuroFlux.length} entries (levels: ${origInstalledNeuroFlux.map((a: any) => a.level).join(', ')})`);
-      console.info(`ORIGINAL FILE - Queued NeuroFlux: ${origQueuedNeuroFlux.length} entries (levels: ${origQueuedNeuroFlux.map((a: any) => a.level).join(', ')})`);
-
-      console.info("File processed...");
     } catch (error) {
-      console.error("Error processing file:", error);
       alert(`Failed to process save file: ${error instanceof Error ? error.message : String(error)}`);
       this.clearFile();
     }
   };
 
   downloadFile = () => {
-    console.log(`DOWNLOAD - Current state before download:`);
-    console.log(`  - this.save.data.PlayerSave.data.augmentations: ${this.save.data.PlayerSave.data.augmentations?.length || 0}`);
-    console.log(`  - this.save.data.PlayerSave.data.queuedAugmentations: ${this.save.data.PlayerSave.data.queuedAugmentations?.length || 0}`);
-
     const rawData: Partial<Bitburner.RawSaveData> = {
       ctor: Bitburner.Ctor.BitburnerSaveObject,
     };
@@ -409,25 +395,10 @@ export class FileStore {
           // Make a deep copy to avoid mutating the original
           const playerSaveCopy = JSON.parse(JSON.stringify(this.save.data.PlayerSave));
 
-          // Log what we're about to save
-          console.log(`DOWNLOAD - About to save PlayerSave with:`);
-          console.log(`  - augmentations: ${playerSaveCopy.data.augmentations?.length || 0} total`);
-          console.log(`  - queuedAugmentations: ${playerSaveCopy.data.queuedAugmentations?.length || 0} total`);
-
           const installedNeuroFlux = playerSaveCopy.data.augmentations?.filter((a: any) => a.name === "NeuroFlux Governor") || [];
           const queuedNeuroFlux = playerSaveCopy.data.queuedAugmentations?.filter((a: any) => a.name === "NeuroFlux Governor") || [];
-          console.log(`  - installed NeuroFlux: ${installedNeuroFlux.length} entries (levels: ${installedNeuroFlux.map((a: any) => a.level).join(', ')})`);
-          console.log(`  - queued NeuroFlux: ${queuedNeuroFlux.length} entries (levels: ${queuedNeuroFlux.map((a: any) => a.level).join(', ')})`);
 
           // The augmentations should already be correctly set by onSubmit in augmentations-section
-          // This is just defensive - log if we see unexpected augmentation counts
-          if (playerSaveCopy.data.augmentations && playerSaveCopy.data.augmentations.length > 200) {
-            console.warn(`Warning: PlayerSave has ${playerSaveCopy.data.augmentations.length} augmentations - this seems excessive`);
-          }
-          if (playerSaveCopy.data.queuedAugmentations && playerSaveCopy.data.queuedAugmentations.length > 200) {
-            console.warn(`Warning: PlayerSave has ${playerSaveCopy.data.queuedAugmentations.length} queued augmentations - this seems excessive`);
-          }
-
           data[key] = JSON.stringify(playerSaveCopy);
         } else {
           data[key] = JSON.stringify(this.save.data[key]);
@@ -489,7 +460,6 @@ export class FileStore {
 
   revertChanges = () => {
     if (!this.originalSave) {
-      console.warn("No original save data to revert to");
       return;
     }
     // Create a fresh deep copy of the original save
@@ -497,7 +467,6 @@ export class FileStore {
     runInAction(() => {
       this.modifiedSave = JSON.parse(JSON.stringify(this.originalSave));
     });
-    console.info("Reverted all changes to original save data");
   };
 }
 

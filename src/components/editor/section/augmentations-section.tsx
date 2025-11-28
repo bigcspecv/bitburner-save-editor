@@ -325,8 +325,6 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
 
       const isResettingToOriginal = status === originalStatus && level === originalLevel;
 
-      console.log(`Augmentation ${augName}: resetting to original? ${isResettingToOriginal} (status: ${status}/${originalStatus}, level: ${level}/${originalLevel})`);
-
       // If resetting to original and no other changes have been made, use original arrays directly
       if (isResettingToOriginal) {
         // Check if current arrays match original except for this one augmentation
@@ -337,7 +335,6 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
           player.originalData?.queuedAugmentations?.filter(a => a.name !== augName).length;
 
         if (currentMatchesOriginalExceptThisAug && player.originalData?.augmentations && player.originalData?.queuedAugmentations) {
-          console.log(`Using ORIGINAL arrays directly for ${augName} reset`);
           player.updatePlayer({
             augmentations: player.originalData.augmentations,
             queuedAugmentations: player.originalData.queuedAugmentations,
@@ -377,8 +374,6 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
         // If status is "none", we don't add it to either array (it's removed above)
       }
 
-      console.log(`Augmentation ${augName} updated to status: ${status}, installed count: ${installedAugs.length}, queued count: ${queuedAugs.length}`);
-
       // Apply cascade changes if confirmed (skipConfirmation means user confirmed or no affected augs)
       if (skipConfirmation && affectedAugs.length > 0) {
         affectedAugs.forEach((affected) => {
@@ -391,16 +386,13 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
 
           if (affected.currentStatus === "installed" && depInstalledIdx >= 0) {
             if (affected.newStatus === "queued") {
-              console.log(`Downgrading ${affected.name} from installed to queued (prerequisite ${augName} is only queued)`);
               const aug = installedAugs[depInstalledIdx];
               installedAugs.splice(depInstalledIdx, 1);
               queuedAugs.push(aug);
             } else if (affected.newStatus === "none") {
-              console.log(`Removing ${affected.name} (prerequisite ${augName} was removed)`);
               installedAugs.splice(depInstalledIdx, 1);
             }
           } else if (affected.currentStatus === "queued" && depQueuedIdx >= 0 && affected.newStatus === "none") {
-            console.log(`Removing ${affected.name} (prerequisite ${augName} was removed)`);
             queuedAugs.splice(depQueuedIdx, 1);
           }
         });
@@ -442,22 +434,13 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
 
   const onUpdateNeuroFlux = useCallback(
     (installedLevel: number, queuedLevel: number) => {
-      console.log(`NeuroFlux update called: installedLevel=${installedLevel}, queuedLevel=${queuedLevel}`);
-      console.log(`BEFORE filter - player.data.augmentations length: ${player.data.augmentations?.length || 0}`);
-      console.log(`BEFORE filter - player.data.queuedAugmentations length: ${player.data.queuedAugmentations?.length || 0}`);
-      console.log(`ORIGINAL - player.originalData.augmentations length: ${player.originalData?.augmentations?.length || 0}`);
-      console.log(`ORIGINAL - player.originalData.queuedAugmentations length: ${player.originalData?.queuedAugmentations?.length || 0}`);
-
       // Determine which arrays to use as source based on whether we're resetting or updating
       const originalInstalledLevel = player.originalData?.augmentations?.filter(a => a.name === "NeuroFlux Governor").reduce((max, a) => Math.max(max, a.level), 0) || 0;
       const originalQueuedLevel = player.originalData?.queuedAugmentations?.filter(a => a.name === "NeuroFlux Governor").reduce((max, a) => Math.max(max, a.level), originalInstalledLevel) || originalInstalledLevel;
       const isResetting = installedLevel === originalInstalledLevel && queuedLevel === originalQueuedLevel;
 
-      console.log(`Resetting? ${isResetting} (requested: ${installedLevel}/${queuedLevel}, original: ${originalInstalledLevel}/${originalQueuedLevel})`);
-
       // If resetting to original values, just use the original arrays directly!
       if (isResetting && player.originalData?.augmentations && player.originalData?.queuedAugmentations) {
-        console.log(`Using ORIGINAL arrays directly (no rebuilding)`);
         player.updatePlayer({
           augmentations: player.originalData.augmentations,
           queuedAugmentations: player.originalData.queuedAugmentations,
@@ -468,8 +451,6 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
       // If not resetting, use current data as source
       const sourceInstalledAugs = player.data.augmentations || [];
       const sourceQueuedAugs = player.data.queuedAugmentations || [];
-
-      console.log(`Using CURRENT arrays as source (rebuilding with new NeuroFlux levels)`);
 
       // Build new installed augmentations array
       // NOTE: Installed NeuroFlux is stored as a SINGLE entry with the max level
@@ -526,10 +507,6 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
           queuedAugs.push({ name: "NeuroFlux Governor", level });
         }
       }
-
-      console.log(`AFTER filter - installedAugs length (non-NeuroFlux): ${installedAugs.filter(a => a.name !== "NeuroFlux Governor").length}`);
-      console.log(`AFTER filter - queuedAugs length (non-NeuroFlux): ${queuedAugs.filter(a => a.name !== "NeuroFlux Governor").length}`);
-      console.log(`FINAL - installedAugs length: ${installedAugs.length}, queuedAugs length: ${queuedAugs.length}`);
 
       player.updatePlayer({
         augmentations: installedAugs,
