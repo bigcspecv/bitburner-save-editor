@@ -28,8 +28,8 @@ Web-based editor for Bitburner save files. Upload your save (JSON/base64 or gzip
     - [x] Display augmentation effects/benefits
     - [x] Filter by effect type (hacking, combat stats, reputation, etc.)
   - [x] Jobs
+  - [x] location & servers
   - [ ] hacknet
-  - [ ] location
   - [ ] progression
   - [ ] stock
   - [ ] feature flags

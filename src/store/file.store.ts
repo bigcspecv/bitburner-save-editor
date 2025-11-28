@@ -40,6 +40,7 @@ export class FileStore {
       data: this.save.data.PlayerSave.data,
       originalData: this.originalSave?.data.PlayerSave.data,
       updatePlayer: this.updatePlayer,
+      resetPurchasedServers: this.resetPurchasedServers,
     };
   }
 
@@ -282,6 +283,7 @@ export class FileStore {
         data: [],
         originalData: [],
         updateServer: this.updateServer,
+        resetServer: this.resetServer,
       };
     }
 
@@ -325,6 +327,7 @@ export class FileStore {
       data: parseServersData(serversData),
       originalData: originalServersData ? parseServersData(originalServersData) : [],
       updateServer: this.updateServer,
+      resetServer: this.resetServer,
     };
   }
 
@@ -347,6 +350,61 @@ export class FileStore {
       } else {
         Object.assign(serverObj, updates);
       }
+    });
+  };
+
+  resetServer = (hostname: string) => {
+    if (!this.save.data.AllServersSave || !this.originalSave?.data.AllServersSave) {
+      return;
+    }
+    const originalServer = this.originalSave.data.AllServersSave[hostname];
+    if (!originalServer) return;
+    runInAction(() => {
+      // Deep clone to avoid mutating original reference
+      this.save.data.AllServersSave[hostname] = JSON.parse(JSON.stringify(originalServer));
+
+       // Keep player.purchasedServers in sync for this hostname
+       const originalPurchased = this.originalSave?.data.PlayerSave?.data?.purchasedServers || [];
+       const currentPurchased = this.save.data.PlayerSave?.data?.purchasedServers || [];
+       const wasPurchased = originalPurchased.includes(hostname);
+       const isPurchased = currentPurchased.includes(hostname);
+
+      if (wasPurchased && !isPurchased) {
+        // Insert at original index if possible
+        const insertIdx = originalPurchased.indexOf(hostname);
+        const next = [...currentPurchased];
+        if (insertIdx >= 0 && insertIdx <= next.length) {
+          next.splice(insertIdx, 0, hostname);
+        } else {
+          next.push(hostname);
+        }
+        this.save.data.PlayerSave.data.purchasedServers = next;
+       } else if (!wasPurchased && isPurchased) {
+         this.save.data.PlayerSave.data.purchasedServers = currentPurchased.filter((h) => h !== hostname);
+       }
+
+    });
+  };
+
+  resetPurchasedServers = () => {
+    if (!this.originalSave?.data.PlayerSave?.data) return;
+    runInAction(() => {
+      const originalList = this.originalSave.data.PlayerSave.data.purchasedServers || [];
+      this.save.data.PlayerSave.data.purchasedServers = JSON.parse(JSON.stringify(originalList));
+
+      if (this.save.data.AllServersSave && this.originalSave.data.AllServersSave) {
+        Object.entries(this.save.data.AllServersSave).forEach(([hostname, serverObj]) => {
+          const original = this.originalSave.data.AllServersSave[hostname];
+          if (!original) return;
+          const originalFlag = (original as any).data?.purchasedByPlayer ?? (original as any).purchasedByPlayer ?? false;
+          if ((serverObj as any).data) {
+            (serverObj as any).data.purchasedByPlayer = originalFlag;
+          } else {
+            (serverObj as any).purchasedByPlayer = originalFlag;
+          }
+        });
+      }
+
     });
   };
 

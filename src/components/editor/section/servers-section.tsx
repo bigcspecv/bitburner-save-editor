@@ -68,6 +68,13 @@ export default observer(function ServersSection({ isFiltering }: Props) {
     [servers]
   );
 
+  const onReset = useCallback(
+    (hostname: string) => {
+      servers.resetServer?.(hostname);
+    },
+    [servers]
+  );
+
   const onEditFilters = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     const element = event.currentTarget as HTMLButtonElement;
     const property = element.dataset.key as keyof typeof filters;
@@ -232,6 +239,7 @@ export default observer(function ServersSection({ isFiltering }: Props) {
                 server={serverData}
                 originalServer={originalServer}
                 onSubmit={onSubmit}
+                onReset={onReset}
                 selected={selectedServers.has(hostname)}
                 onToggleSelected={onToggleServer}
               />
@@ -248,6 +256,7 @@ interface ServerProps extends PropsWithChildren<{}> {
   server: Bitburner.ServerData;
   originalServer?: Bitburner.ServerData;
   onSubmit(hostname: string, value: Partial<Bitburner.ServerData>): void;
+  onReset(hostname: string): void;
   selected: boolean;
   onToggleSelected(hostname: string, checked: boolean): void;
 }
@@ -259,7 +268,7 @@ const VALID_RAM_VALUES = [
   33554432, 67108864, 134217728, 268435456, 536870912, 1073741824
 ];
 
-const Server = function Server({ hostname, server, originalServer, onSubmit, selected, onToggleSelected }: ServerProps) {
+const Server = function Server({ hostname, server, originalServer, onSubmit, onReset, selected, onToggleSelected }: ServerProps) {
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState(Object.assign({}, server));
   const [pendingSave, setPendingSave] = useState(false);
@@ -345,11 +354,8 @@ const Server = function Server({ hostname, server, originalServer, onSubmit, sel
 
   const handleRevert = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    if (originalServer) {
-      onSubmit(hostname, originalServer);
-      setState(Object.assign({}, originalServer));
-    }
-  }, [hostname, originalServer, onSubmit]);
+    onReset(hostname);
+  }, [hostname, onReset]);
 
   // Check if server is modified (has non-default interesting values)
   const isModified = state.purchasedByPlayer || state.backdoorInstalled || state.hasAdminRights;

@@ -55,7 +55,7 @@ All section components follow a similar pattern:
 - Provide "Reset" buttons to revert individual items
 
 **Implemented Sections**:
-- **PlayerSection** (`player-section.tsx`) - Nested tabs for Stats, Augmentations, Jobs, etc.
+- **PlayerSection** (`player-section.tsx`) - Nested tabs for Stats, Augmentations, Jobs, Location & Servers (city/location/current server, purchased server list with flag sync)
 - **FactionsSection** (`factions-section.tsx`) - Faction membership, reputation, favor
 - **CompaniesSection** (`companies-section.tsx`) - Company reputation and favor
 - **ServersSection** (`servers-section.tsx`) - Server RAM, money, admin rights, backdoors
@@ -224,6 +224,19 @@ Section components should:
 - Key editable properties: maxRam, moneyAvailable, hasAdminRights, backdoorInstalled
 - Special servers: "home" (player's home server), purchased servers
 
+### Player Location & Purchased Servers
+- City stored in `PlayerSave.data.city`; location stored in `PlayerSave.data.location`
+- Location input uses suggestions but accepts free text; selecting a city-tied location auto-updates the city
+- Current terminal server stored in `PlayerSave.data.currentServer` with suggestions derived from `AllServersSave`
+- Purchased servers stored in `PlayerSave.data.purchasedServers`; updates also toggle `purchasedByPlayer` on matching servers in `AllServersSave`
+
+### Reset Patterns (important when adding new components)
+- `hasChanges` uses a raw `JSON.stringify` deep equality of `originalSave` vs `modifiedSave`; resets must restore exact original structures and ordering or the app will still show “unsaved changes.”
+- Add reset helpers in the store that deep-clone from `originalSave` back into `modifiedSave` (e.g., `resetServer`, `resetPurchasedServers`) instead of reusing UI-local state.
+- If data spans multiple areas (e.g., purchased server names in `PlayerSave` plus `purchasedByPlayer` flags in `AllServersSave`), reset helpers must reconcile all linked fields to original values and ordering.
+- Expose reset helpers via the relevant context getter (player/servers/etc.) and have UI reset buttons call those helpers directly.
+- For ordered lists (factions, purchased servers, invitations), preserve original ordering when re-inserting during resets to avoid false diffs.
+
 ## Progress Tracking
 
 **CRITICAL**: You must actively maintain the project checklist in `README.md`.
@@ -311,5 +324,7 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **2025-11-28** - Checkbox component now uses an invisible overlay input instead of a hidden input so clicks toggle correctly (fixes unresponsive checkboxes across sections, including Servers)
 - **2025-11-28** - Added optional `stopPropagation` to Checkbox and now stop propagation on the label/input to keep collapsed cards from opening when toggling selection (Servers)
 - **2025-11-28** - Added shared `NotImplemented` helper with icon indicator; used across editor sections (player placeholders and default section) to mark unimplemented areas
-- **2025-11-28** - Navigation tabs now show a yellow “not implemented” icon for unbuilt sections (main editor tabs and unimplemented player subtabs)
+- **2025-11-28** - Navigation tabs now show a yellow "not implemented" icon for unbuilt sections (main editor tabs and unimplemented player subtabs)
 - **2025-11-28** - Top editor tabs now show human-readable labels (Player, Factions, Companies, Servers, etc.) instead of SaveDataKey enum names
+- **2025-11-28** - Implemented Player Location & Servers subtab (city/location editors, current server suggestions, purchased server list synced with `purchasedByPlayer` flags)
+- **2025-11-29** - Reset pattern reminder: add store-level reset helpers that deep-clone original data and reconcile cross-entity links (e.g., purchased servers list + server flags) to clear `hasChanges` accurately; expose helpers via context
