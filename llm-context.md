@@ -1,5 +1,23 @@
 # Bitburner Save Editor - LLM Context
 
+## IMPORTANT: Instructions for LLM Agents
+
+**This document serves as persistent memory across chat sessions. Follow these guidelines:**
+
+1. **Maintain this document**: When you discover important architectural decisions, patterns, gotchas, or implementation details during your work, add them to the appropriate section of this document. This ensures future AI agents have the context they need.
+
+2. **Update the README checklist**: The `README.md` file contains a TODO checklist that tracks project progress. You MUST:
+   - Mark items as complete `[x]` when you finish implementing them
+   - Add new checklist items when you identify additional work needed
+   - Keep sub-items organized under their parent features
+   - Maintain the existing format and structure
+
+3. **Document patterns**: If you establish a new pattern or convention while working on a feature, document it here so future implementations remain consistent.
+
+4. **Note breaking changes**: If you discover version-specific behavior or compatibility issues, document them in the "Important Notes" section.
+
+5. **This file is for LLMs**: Write for other AI agents, not humans. Be concise but comprehensive. Focus on what an LLM needs to work effectively on this codebase.
+
 ## Project Overview
 
 This is a web-based save file editor for the game **Bitburner** (Steam version 2.8.1). It allows users to upload their Bitburner save files and modify various game attributes including player stats, factions, companies, servers, augmentations, and jobs. The editor maintains both an immutable original copy and a mutable working copy of the save data, enabling users to revert changes at any time.
@@ -168,7 +186,7 @@ Section components should:
 ## Common Data Patterns
 
 ### Jobs
-- Stored as `Record<string, string>` (company name ’ job title)
+- Stored as `Record<string, string>` (company name ï¿½ job title)
 - Editable via JobsSection with dropdowns filtered by company
 
 ### Factions
@@ -193,10 +211,23 @@ Section components should:
 
 ## Progress Tracking
 
-Current project status and todo items are maintained in:
-**`README.md`** - See the TODO section
+**CRITICAL**: You must actively maintain the project checklist in `README.md`.
 
-The TODO list uses markdown checkboxes and is the single source of truth for what features are implemented vs pending.
+### Checklist Management Rules
+
+1. **Location**: All progress tracking is in `README.md` under the "TODO" section
+2. **Format**: Uses markdown checkboxes `- [ ]` (incomplete) and `- [x]` (complete)
+3. **Your Responsibilities**:
+   - Mark items complete when you finish implementing them
+   - Add new items when you identify work that needs to be done
+   - Keep nested sub-items properly indented
+   - Don't remove completed items - they show project history
+4. **When to Update**:
+   - Immediately after completing a feature or sub-feature
+   - When you discover new requirements during implementation
+   - When breaking a large feature into smaller tasks
+
+The TODO list is the **single source of truth** for project status. Keep it current.
 
 ## Important Notes
 
@@ -210,15 +241,15 @@ The TODO list uses markdown checkboxes and is the single source of truth for wha
 
 ## Example Usage Flow
 
-1. User exports save from Bitburner (Settings ’ Export Game)
+1. User exports save from Bitburner (Settings ï¿½ Export Game)
 2. User uploads save file to editor
 3. Editor parses and displays data across multiple tabs
-4. User navigates to desired section (e.g., Player ’ Jobs)
+4. User navigates to desired section (e.g., Player ï¿½ Jobs)
 5. User clicks "Add Job" and selects company + job title from dropdowns
 6. Editor shows yellow border indicating unsaved change
 7. User can revert individual changes or all changes
 8. User downloads modified save
-9. User imports modified save back into Bitburner (Settings ’ Import Game)
+9. User imports modified save back into Bitburner (Settings ï¿½ Import Game)
 
 ## Key Dependencies
 
@@ -242,3 +273,12 @@ The TODO list uses markdown checkboxes and is the single source of truth for wha
 - Example save files located in `example save files/` (ignored by git)
 - Test both gzipped and base64 save formats
 - Verify downloaded saves can be imported back into Bitburner successfully
+
+---
+
+## Document Maintenance Log
+
+*Track significant updates to this context document here. Include date and brief description.*
+
+- **2025-01** - Initial document creation with comprehensive project context
+- **2025-01** - Added LLM agent instructions for maintaining this document and README checklist
