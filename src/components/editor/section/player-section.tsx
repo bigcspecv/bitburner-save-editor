@@ -20,8 +20,42 @@ type SectionKey =
   | "hacknet"
   | "location"
   | "progression"
-  | "market"
-  | "features";
+  | "finance"
+  | "meta";
+
+const PLACEHOLDER_FIELDS: Record<SectionKey, string[]> = {
+  general: ["city", "bitNodeN", "currentServer", "identifier", "focus", "entropy"],
+  stats: [],
+  augmentations: [],
+  jobs: [],
+  hacknet: ["hacknetNodes", "hashManager (capacity, hashes, upgrades)"],
+  location: ["location", "purchasedServers"],
+  progression: [
+    "playtimeSinceLastAug",
+    "playtimeSinceLastBitnode",
+    "lastAugReset",
+    "lastNodeReset",
+    "totalPlaytime",
+    "scriptProdSinceLastAug",
+    "currentWork",
+  ],
+  finance: ["hasWseAccount", "hasTixApiAccess", "has4SData", "has4SDataTixApi", "moneySourceA", "moneySourceB"],
+  meta: [
+    "factions",
+    "factionInvitations",
+    "factionRumors",
+    "exploits",
+    "achievements",
+    "sourceFiles",
+    "sleeves",
+    "sleevesFromCovenant",
+    "bitNodeOptions",
+    "terminalCommandHistory",
+    "corporation",
+    "gang",
+    "bladeburner",
+  ],
+};
 
 export default observer(function PlayerSection() {
   const { player } = useContext(FileContext);
@@ -37,15 +71,15 @@ export default observer(function PlayerSection() {
   );
 
   const sections: { key: SectionKey; label: string }[] = [
-    { key: "general", label: "General" },
+    { key: "general", label: "Identity & Basics" },
     { key: "stats", label: "Stats & Skills" },
     { key: "augmentations", label: "Augmentations" },
     { key: "jobs", label: "Jobs" },
     { key: "hacknet", label: "Hacknet" },
     { key: "location", label: "Location & Servers" },
-    { key: "progression", label: "Progression" },
-    { key: "market", label: "Stock Market" },
-    { key: "features", label: "Game Features" },
+    { key: "progression", label: "Progression & Timers" },
+    { key: "finance", label: "Finance & Market" },
+    { key: "meta", label: "Factions & Flags" },
   ];
 
   const renderSection = () => {
@@ -97,12 +131,76 @@ export default observer(function PlayerSection() {
         return <JobsSection isFiltering={true} />;
 
       case "general":
+        return (
+          <div className="text-slate-300">
+            <p>Not Implemented</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              {PLACEHOLDER_FIELDS.general.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+
       case "hacknet":
+        return (
+          <div className="text-slate-300">
+            <p>Not Implemented</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              {PLACEHOLDER_FIELDS.hacknet.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+
       case "location":
+        return (
+          <div className="text-slate-300">
+            <p>Not Implemented</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              {PLACEHOLDER_FIELDS.location.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+
       case "progression":
-      case "market":
-      case "features":
-        return <div className="text-slate-300">Not Implemented</div>;
+        return (
+          <div className="text-slate-300">
+            <p>Not Implemented</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              {PLACEHOLDER_FIELDS.progression.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+
+      case "finance":
+        return (
+          <div className="text-slate-300">
+            <p>Not Implemented</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              {PLACEHOLDER_FIELDS.finance.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
+
+      case "meta":
+        return (
+          <div className="text-slate-300">
+            <p>Not Implemented</p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              {PLACEHOLDER_FIELDS.meta.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        );
 
       default:
         return <div className="text-slate-300">Not Implemented</div>;

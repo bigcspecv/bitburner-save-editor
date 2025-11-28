@@ -6,6 +6,23 @@ import { Bitburner } from "bitburner";
 import { FileContext } from "App";
 import EditorSection from "components/editor/section";
 
+const TAB_LABELS: Record<Bitburner.SaveDataKey, string> = {
+  [Bitburner.SaveDataKey.PlayerSave]: "Player",
+  [Bitburner.SaveDataKey.FactionsSave]: "Factions",
+  [Bitburner.SaveDataKey.AllServersSave]: "Servers",
+  [Bitburner.SaveDataKey.CompaniesSave]: "Companies",
+  [Bitburner.SaveDataKey.AliasesSave]: "Aliases",
+  [Bitburner.SaveDataKey.GlobalAliasesSave]: "Global Aliases",
+  [Bitburner.SaveDataKey.StockMarketSave]: "Stock Market",
+  [Bitburner.SaveDataKey.SettingsSave]: "Settings",
+  [Bitburner.SaveDataKey.VersionSave]: "Version",
+  [Bitburner.SaveDataKey.AllGangsSave]: "Gangs",
+  [Bitburner.SaveDataKey.LastExportBonus]: "Export Bonus",
+  [Bitburner.SaveDataKey.StaneksGiftSave]: "Stanek's Gift",
+  [Bitburner.SaveDataKey.GoSave]: "Go",
+  [Bitburner.SaveDataKey.InfiltrationsSave]: "Infiltrations",
+};
+
 export default observer(function EditorContainer() {
   const fileContext = useContext(FileContext);
   const navRef = useRef<HTMLElement>();
@@ -51,7 +68,7 @@ export default observer(function EditorContainer() {
               key={key}
             >
               <button property={key} className="px-4 py-2 -b-px font-semibold" value={key} onClick={onClickTab}>
-                {key}
+                {TAB_LABELS[key] ?? key}
               </button>
               {/* TODO: remove filter toggle if we never add filters; button hidden for now */}
             </div>
