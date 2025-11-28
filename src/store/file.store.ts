@@ -257,6 +257,49 @@ export class FileStore {
     });
   };
 
+  get jobs() {
+    if (!this.save.data.PlayerSave || !this.save.data.PlayerSave.data) {
+      return {
+        data: [],
+        originalData: [],
+        updateJob: this.updateJob,
+        deleteJob: this.deleteJob,
+      };
+    }
+
+    // Helper to parse jobs data - returns array of [companyName, jobTitle]
+    const parseJobsData = (jobs: Record<string, string> | undefined) => {
+      if (!jobs) return [];
+      return Object.entries(jobs).sort((a, b) => a[0].localeCompare(b[0]));
+    };
+
+    return {
+      data: parseJobsData(this.save.data.PlayerSave.data.jobs),
+      originalData: this.originalSave?.data.PlayerSave?.data?.jobs
+        ? parseJobsData(this.originalSave.data.PlayerSave.data.jobs)
+        : [],
+      updateJob: this.updateJob,
+      deleteJob: this.deleteJob,
+    };
+  }
+
+  updateJob = (company: string, jobTitle: string) => {
+    runInAction(() => {
+      if (!this.save.data.PlayerSave.data.jobs) {
+        this.save.data.PlayerSave.data.jobs = {};
+      }
+      this.save.data.PlayerSave.data.jobs[company] = jobTitle;
+    });
+  };
+
+  deleteJob = (company: string) => {
+    runInAction(() => {
+      if (this.save.data.PlayerSave.data.jobs) {
+        delete this.save.data.PlayerSave.data.jobs[company];
+      }
+    });
+  };
+
   clearFile = () => {
     this._file = undefined;
     this.originalSave = undefined;

@@ -28,3 +28,4 @@ yarn-error.log*
 /example save files
 /.idea
 /.vscode
+/.bitburner-src-dev

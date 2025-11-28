@@ -8,6 +8,7 @@ import StatSection from "./properties/stat";
 import { FileContext } from "App";
 import { formatMoney, formatNumber } from "util/format";
 import AugmentationsSection from "./augmentations-section";
+import JobsSection from "./jobs-section";
 
 export type PlayerDataKey = keyof Bitburner.PlayerSaveObject["data"];
 
@@ -93,8 +94,10 @@ export default observer(function PlayerSection() {
       case "augmentations":
         return <AugmentationsSection isFiltering={true} />;
 
-      case "general":
       case "factions":
+        return <JobsSection isFiltering={true} />;
+
+      case "general":
       case "hacknet":
       case "location":
       case "progression":

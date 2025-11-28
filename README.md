@@ -28,7 +28,12 @@ Web-based editor for Bitburner save files. Upload your save (JSON/base64 or gzip
   - [x] Augmentations (installed/queued, NeuroFlux level tracking)
   - [x] Exploits
     - [x] Edit Save File (auto-added on load)
-  - [ ] Jobs, hacknet, location, progression, stock, feature flags
+  - [x] Jobs
+  - [ ] hacknet
+  - [ ] location
+  - [ ] progression
+  - [ ] stock
+  - [ ] feature flags
 - [ ] Settings
 - [ ] Staneks
 - [ ] Stock Market
