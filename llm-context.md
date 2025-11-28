@@ -298,3 +298,8 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **2025-01** - Initial document creation with comprehensive project context
 - **2025-01** - Added LLM agent instructions for maintaining this document and README checklist
 - **2025-01** - Added augmentation metadata system with complete effect data for all 145 augmentations and filtering capabilities
+- **2025-11-27** - NeuroFlux Governor editor overlay removed (was dimming page and blocking interactions when entering edit mode)
+- **2025-11-27** - Added shared SearchBar component for consistent search UI (used in augmentations, companies, factions, servers, jobs)
+- **2025-11-27** - SearchBar now includes inline clear (×) button to reset queries in all sections
+- **2025-11-27** - NeuroFlux Governor inputs always visible (no more display-only state before click) for clearer editability
+- **2025-11-27** - NeuroFlux Governor levels now use shared NumberInput (with increment/decrement controls) min=0, no max

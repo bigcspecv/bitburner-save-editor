@@ -19,10 +19,11 @@ import { FileContext } from "App";
 import { Bitburner } from "bitburner.types";
 import { Checkbox } from "components/inputs/checkbox";
 import { Input } from "components/inputs/input";
+import { NumberInput } from "components/inputs/number-input";
+import { SearchBar } from "components/inputs/search-bar";
 import { useDebounce } from "util/hooks";
 
 import { SortAscendingIcon, SortDescendingIcon } from "@heroicons/react/solid";
-import { ReactComponent as SearchIcon } from "icons/search.svg";
 
 interface Props extends PropsWithChildren<{}> {
   isFiltering?: boolean;
@@ -579,16 +580,12 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
       {isFiltering && (
         <>
           <div className="mb-4 flex gap-4 flex-wrap">
-            <label className="flex items-center">
-              <SearchIcon className="h-6 w-6 text-slate-500" />
-              <Input
-                className="border-b border-green-900"
-                onChange={(e) => setQuery(e.currentTarget.value)}
-                value={query}
-                type="text"
-                placeholder="Search Augmentations..."
-              />
-            </label>
+            <SearchBar
+              onChange={(e) => setQuery(e.currentTarget.value)}
+              value={query}
+              placeholder="Search Augmentations..."
+              onClear={() => setQuery("")}
+            />
           </div>
 
           {/* Status Filters */}
@@ -1258,7 +1255,6 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
   hasChanged,
   onUpdate,
 }: NeuroFluxGovernorProps) {
-  const [editing, setEditing] = useState(false);
   const [state, setState] = useState({ installedLevel, queuedLevel });
 
   // Sync state when props change from outside (e.g., after update or revert)
@@ -1273,39 +1269,31 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
   );
 
   const handleUpdate = useCallback(
-    (event: React.MouseEvent) => {
+    (event: MouseEvent) => {
       event.stopPropagation();
       const finalInstalled = Math.max(0, Math.min(10000, Number(state.installedLevel)));
       const finalQueued = Math.max(finalInstalled, Math.min(10000, Number(state.queuedLevel)));
       onUpdate(finalInstalled, finalQueued);
-      setEditing(false);
     },
     [state.installedLevel, state.queuedLevel, onUpdate]
   );
 
   const handleRevert = useCallback(
-    (event: React.MouseEvent) => {
+    (event: MouseEvent) => {
       event.stopPropagation();
       onUpdate(originalInstalledLevel, originalQueuedLevel);
       setState({ installedLevel: originalInstalledLevel, queuedLevel: originalQueuedLevel });
-      setEditing(false);
     },
     [originalInstalledLevel, originalQueuedLevel, onUpdate]
   );
 
   const handleCancel = useCallback(
-    (event: React.MouseEvent) => {
+    (event: MouseEvent) => {
       event.stopPropagation();
       setState({ installedLevel, queuedLevel });
-      setEditing(false);
     },
     [installedLevel, queuedLevel]
   );
-
-  const onClickEnter = useCallback<MouseEventHandler<HTMLDivElement>>((event) => {
-    setEditing(true);
-    event.preventDefault();
-  }, []);
 
   const onInstalledChange = useCallback<ChangeEventHandler<HTMLInputElement>>((event) => {
     const value = Number(event.currentTarget.value);
@@ -1317,9 +1305,8 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
     setState((s) => ({ ...s, queuedLevel: Math.max(s.installedLevel, value) }));
   }, []);
 
-  const onClose = useCallback<FormEventHandler>(
+  const onFormSubmit = useCallback<FormEventHandler>(
     (event) => {
-      // Don't close if there are unsaved changes - require explicit action
       event.preventDefault();
     },
     []
@@ -1334,12 +1321,10 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
           "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-4 rounded border shadow overflow-hidden max-w-2xl",
           hasChanged ? "border-yellow-500 shadow-yellow-700" : "border-gray-700 shadow-green-700",
           "hover:bg-gray-800 focus-within:bg-gray-800",
-          editing && "z-20",
-          hasValues && !editing && "bg-gray-800/50"
+          hasValues && "bg-gray-800/50"
         )}
-        onClick={!editing ? onClickEnter : undefined}
       >
-        <form className="flex flex-col gap-4" data-id="neuroflux-section" onSubmit={onClose}>
+        <form className="flex flex-col gap-4" data-id="neuroflux-section" onSubmit={onFormSubmit}>
           <div className="flex items-baseline justify-between">
             <h3 className="text-sm font-semibold text-green-300">NeuroFlux Governor</h3>
             {hasChanged && (
@@ -1365,38 +1350,26 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col">
               <span className="text-sm text-green-300 mb-1">Installed up to Level:</span>
-              {editing ? (
-                <Input
-                  onChange={onInstalledChange}
-                  value={`${state.installedLevel}`}
-                  type="number"
-                  min="0"
-                  max="10000"
-                  className="bg-gray-900 border border-gray-700 rounded px-2 py-1"
-                />
-              ) : (
-                <span className="text-2xl font-bold text-green-100">{state.installedLevel}</span>
-              )}
-              {!editing && state.installedLevel > 0 && (
+              <NumberInput
+                onChange={onInstalledChange}
+                value={`${state.installedLevel}`}
+                min={0}
+                className="bg-gray-900 border border-gray-700 rounded px-2 py-1"
+              />
+              {state.installedLevel > 0 && (
                 <span className="text-xs text-slate-400 mt-1">Levels 1-{state.installedLevel}</span>
               )}
             </label>
 
             <label className="flex flex-col">
               <span className="text-sm text-yellow-300 mb-1">Queued up to Level:</span>
-              {editing ? (
-                <Input
-                  onChange={onQueuedChange}
-                  value={`${state.queuedLevel}`}
-                  type="number"
-                  min={state.installedLevel}
-                  max="10000"
-                  className="bg-gray-900 border border-gray-700 rounded px-2 py-1"
-                />
-              ) : (
-                <span className="text-2xl font-bold text-yellow-100">{state.queuedLevel}</span>
-              )}
-              {!editing && state.queuedLevel > state.installedLevel && (
+              <NumberInput
+                onChange={onQueuedChange}
+                value={`${state.queuedLevel}`}
+                min={state.installedLevel}
+                className="bg-gray-900 border border-gray-700 rounded px-2 py-1"
+              />
+              {state.queuedLevel > state.installedLevel && (
                 <span className="text-xs text-slate-400 mt-1">
                   Levels {state.installedLevel + 1}-{state.queuedLevel}
                 </span>
@@ -1404,7 +1377,7 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
             </label>
           </div>
 
-          {editing && hasLocalChanges && (
+          {hasLocalChanges && (
             <div className="flex gap-2 justify-end">
               <button
                 type="button"
@@ -1426,13 +1399,6 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
           <button type="submit" className="hidden" />
         </form>
       </div>
-      <div
-        className={clsx(
-          "fixed inset-0 bg-gray-900 transition-opacity duration-200 ease-in-out",
-          editing ? "opacity-50 z-10" : "opacity-0 pointer-events-none -z-10"
-        )}
-        onClick={onClose}
-      />
     </>
   );
 };

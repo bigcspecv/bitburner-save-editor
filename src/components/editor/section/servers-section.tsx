@@ -20,11 +20,11 @@ import { Bitburner } from "bitburner.types";
 import { Input } from "components/inputs/input";
 import { Checkbox } from "components/inputs/checkbox";
 import { NumberInput } from "components/inputs/number-input";
+import { SearchBar } from "components/inputs/search-bar";
 import { formatNumber } from "util/format";
 import { useDebounce } from "util/hooks";
 
 import { SortAscendingIcon, SortDescendingIcon } from "@heroicons/react/solid";
-import { ReactComponent as SearchIcon } from "icons/search.svg";
 
 interface Props extends PropsWithChildren<{}> {
   isFiltering?: boolean;
@@ -146,16 +146,12 @@ export default observer(function ServersSection({ isFiltering }: Props) {
       {isFiltering && (
         <>
           <div className="mb-4 flex gap-4">
-            <label className="flex items-center">
-              <SearchIcon className="h-6 w-6 text-slate-500" />
-              <Input
-                className="border-b border-green-900"
-                onChange={(e) => setQuery(e.currentTarget.value)}
-                value={query}
-                type="text"
-                placeholder="Search Servers..."
-              />
-            </label>
+            <SearchBar
+              onChange={(e) => setQuery(e.currentTarget.value)}
+              value={query}
+              placeholder="Search Servers..."
+              onClear={() => setQuery("")}
+            />
           </div>
           <div className="mb-4 flex gap-4">
             <button

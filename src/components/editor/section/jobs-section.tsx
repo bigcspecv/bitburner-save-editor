@@ -16,9 +16,9 @@ import { ascend, descend, path, sortWith } from "ramda";
 import { FileContext } from "App";
 import { Bitburner } from "bitburner.types";
 import { Input } from "components/inputs/input";
+import { SearchBar } from "components/inputs/search-bar";
 
 import { SortAscendingIcon, SortDescendingIcon } from "@heroicons/react/solid";
-import { ReactComponent as SearchIcon } from "icons/search.svg";
 import { useDebounce } from "util/hooks";
 
 interface Props extends PropsWithChildren<{}> {
@@ -64,16 +64,13 @@ export default observer(function JobsSection({ isFiltering }: Props) {
       {isFiltering && (
         <>
           <div className="mb-4 flex gap-4 items-center">
-            <label className="flex items-center flex-1">
-              <SearchIcon className="h-6 w-6 text-slate-500" />
-              <Input
-                className="border-b border-green-900"
-                onChange={(e) => setQuery(e.currentTarget.value)}
-                value={query}
-                type="text"
-                placeholder="Search Companies..."
-              />
-            </label>
+            <SearchBar
+              className="flex-1"
+              onChange={(e) => setQuery(e.currentTarget.value)}
+              value={query}
+              placeholder="Search Companies..."
+              onClear={() => setQuery("")}
+            />
             <button
               className="flex items-center justify-center gap-2 px-4 py-2 rounded bg-green-800 hover:bg-green-700 text-white"
               onClick={handleAddNew}

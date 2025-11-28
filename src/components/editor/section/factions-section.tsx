@@ -18,11 +18,11 @@ import { FileContext } from "App";
 import { Bitburner } from "bitburner.types";
 import { Checkbox } from "components/inputs/checkbox";
 import { Input } from "components/inputs/input";
+import { SearchBar } from "components/inputs/search-bar";
 import { formatNumber } from "util/format";
 import { useDebounce } from "util/hooks";
 
 import { SortAscendingIcon, SortDescendingIcon } from "@heroicons/react/solid";
-import { ReactComponent as SearchIcon } from "icons/search.svg";
 
 export type FactionDataKey = keyof Bitburner.FactionsSaveObject["data"];
 
@@ -105,16 +105,12 @@ export default observer(function FactionSection({ isFiltering }: Props) {
       {isFiltering && (
         <>
           <div className="mb-4 flex gap-4">
-            <label className="flex items-center">
-              <SearchIcon className="h-6 w-6 text-slate-500" />
-              <Input
-                className="border-b border-green-900"
-                onChange={(e) => setQuery(e.currentTarget.value)}
-                value={query}
-                type="text"
-                placeholder="Search Factions..."
-              />
-            </label>
+            <SearchBar
+              onChange={(e) => setQuery(e.currentTarget.value)}
+              value={query}
+              placeholder="Search Factions..."
+              onClear={() => setQuery("")}
+            />
             <label className="inline-flex items-center text-slate-100">
               <Checkbox onChange={onEditFilters} data-key="alreadyInvited" checked={filters.alreadyInvited ?? false} />
               <span className="ml-2">Invited?</span>
