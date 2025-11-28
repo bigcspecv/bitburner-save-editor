@@ -12,7 +12,7 @@ import clsx from "clsx";
 import { observer } from "mobx-react-lite";
 import { FileContext } from "App";
 import { calculateExp } from "util/game";
-import { Bitburner } from "bitburner.types";
+import { Bitburner } from "bitburner";
 
 interface Props extends PropsWithChildren<{}> {
   property: Bitburner.PlayerStat;

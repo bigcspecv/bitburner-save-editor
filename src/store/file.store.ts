@@ -1,5 +1,5 @@
 import { Buffer } from "buffer";
-import { Bitburner } from "bitburner.types";
+import { Bitburner } from "bitburner";
 import { makeAutoObservable, runInAction } from "mobx";
 import * as pako from "pako";
 

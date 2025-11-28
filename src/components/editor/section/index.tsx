@@ -1,6 +1,6 @@
 import React, { Component } from "react";
 
-import { Bitburner } from "bitburner.types";
+import { Bitburner } from "bitburner";
 import PlayerSection from "./player-section";
 import FactionSection from "./factions-section";
 import CompaniesSection from "./companies-section";

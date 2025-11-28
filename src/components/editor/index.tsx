@@ -2,7 +2,7 @@ import { MouseEventHandler, useCallback, useContext, useRef, useState } from "re
 import clsx from "clsx";
 import { observer } from "mobx-react-lite";
 
-import { Bitburner } from "bitburner.types";
+import { Bitburner } from "bitburner";
 import { FileContext } from "App";
 import EditorSection from "components/editor/section";
 

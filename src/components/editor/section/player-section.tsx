@@ -2,7 +2,7 @@ import { useCallback, useContext, useState } from "react";
 import { observer } from "mobx-react-lite";
 import clsx from "clsx";
 
-import { Bitburner } from "bitburner.types";
+import { Bitburner } from "bitburner";
 import EditableSection from "./properties/editable";
 import StatSection from "./properties/stat";
 import { FileContext } from "App";

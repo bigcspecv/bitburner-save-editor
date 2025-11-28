@@ -15,7 +15,7 @@ import clsx from "clsx";
 import { ascend, descend, path, pick, sortWith } from "ramda";
 
 import { FileContext } from "App";
-import { Bitburner } from "bitburner.types";
+import { Bitburner } from "bitburner";
 import { Checkbox } from "components/inputs/checkbox";
 import { Input } from "components/inputs/input";
 import { SearchBar } from "components/inputs/search-bar";

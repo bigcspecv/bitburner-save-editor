@@ -41,7 +41,7 @@ The root structure is a `BitburnerSaveObject` containing nested save data for di
 
 - **`src/App.tsx`** - Root component, provides FileStore context
 - **`src/store/file.store.ts`** - MobX store managing save data (original + modified copies)
-- **`src/bitburner.types.ts`** - TypeScript definitions for Bitburner data structures, game constants (companies, jobs, augmentations)
+- **`src/bitburner/index.ts`** - Barrel exporting Bitburner types and data (types in `bitburner/types.ts`, data in `bitburner/data/`)
 - **`src/components/file-loader.tsx`** - File upload component
 - **`src/components/editor/`** - Main editor interface with tabbed sections
 
@@ -122,7 +122,7 @@ When implementing features, these source files are particularly useful:
 
 ## Game Data Constants
 
-The editor includes hardcoded constants from Bitburner in `src/bitburner.types.ts`:
+The editor includes hardcoded constants from Bitburner in `src/bitburner/data/` (attached to the exported `Bitburner` namespace via `src/bitburner/index.ts` using `Object.assign`):
 
 - **`ALL_COMPANIES`** - All 38 companies in the game
 - **`ALL_JOB_TITLES`** - All 36 job positions
@@ -151,7 +151,7 @@ Each augmentation displays a summary of its primary effects when collapsed, and 
 ### Adding a New Feature
 
 1. **Research**: Check Bitburner source code in `.bitburner-src-dev/` for data structures
-2. **Types**: Add/update TypeScript definitions in `bitburner.types.ts`
+2. **Types**: Add/update TypeScript definitions in `bitburner/types.ts` and data in `bitburner/data/`
 3. **Store**: Add getter and update methods to `file.store.ts`
 4. **UI Component**: Create section component in `src/components/editor/section/`
 5. **Integration**: Wire up component in `section/index.tsx`
@@ -304,3 +304,4 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **2025-11-27** - NeuroFlux Governor inputs always visible (no more display-only state before click) for clearer editability
 - **2025-11-27** - NeuroFlux Governor levels now use shared NumberInput (with increment/decrement controls) min=0, no max
 - **2025-11-27** - Player tab filter toggle hidden (placeholder button removed; TODO left to restore/remove if filters added)
+- **2025-11-27** - Split monolithic `bitburner.types.ts` into `bitburner/` barrel with `types.ts` and `data/` modules; legacy `bitburner.types.ts` now re-exports the barrel
