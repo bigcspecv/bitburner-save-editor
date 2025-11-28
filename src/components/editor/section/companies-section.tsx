@@ -188,6 +188,11 @@ const Company = function Company({ id, company, originalCompany, onSubmit }: Com
     setPendingSave(true);
   }, []);
 
+  const onSetFavorToMax = useCallback(() => {
+    setState((s: any) => ({ ...s, favor: 150 }));
+    setPendingSave(true);
+  }, []);
+
   const onClose = useCallback<FormEventHandler>(
     (event) => {
       setEditing(false);
@@ -215,6 +220,11 @@ const Company = function Company({ id, company, originalCompany, onSubmit }: Com
           <header className="col-span-2 flex items-baseline justify-between">
             <h3 className={clsx("tracking-wide", hasValues ? "text-green-300" : "text-green-100")}>{id}</h3>
             <div className="flex items-center gap-2">
+              {!editing && hasValues && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-green-900/50 text-green-300">
+                  {state.playerReputation > 0 && state.favor > 0 ? "Rep + Favor" : state.playerReputation > 0 ? "Rep" : "Favor"}
+                </span>
+              )}
               {hasChanged && (
                 <button
                   type="button"
@@ -224,11 +234,6 @@ const Company = function Company({ id, company, originalCompany, onSubmit }: Com
                 >
                   Reset
                 </button>
-              )}
-              {!editing && hasValues && !hasChanged && (
-                <span className="text-xs px-1.5 py-0.5 rounded bg-green-900/50 text-green-300">
-                  {state.playerReputation > 0 && state.favor > 0 ? "Rep + Favor" : state.playerReputation > 0 ? "Rep" : "Favor"}
-                </span>
               )}
             </div>
           </header>
@@ -245,16 +250,26 @@ const Company = function Company({ id, company, originalCompany, onSubmit }: Com
             )}
             {!editing && <p className="px-2 py-1 w-full">{formatNumber(state.playerReputation || 0)}</p>}
           </label>
-          <label className="col-span-2 flex items-center">
+          <label className="col-span-2 flex items-center gap-2">
             <span className="mr-1">Favor: </span>
             {editing && (
               <Input
+                className="flex-1"
                 disabled={!editing}
                 onChange={onChange}
                 value={`${state.favor}`}
                 type="number"
                 data-key="favor"
               />
+            )}
+            {editing && (
+              <button
+                type="button"
+                onClick={onSetFavorToMax}
+                className="px-2 py-1 text-xs rounded bg-green-700 hover:bg-green-600 text-white whitespace-nowrap"
+              >
+                150
+              </button>
             )}
             {!editing && <p className="px-2 py-1 w-full">{formatNumber(state.favor)}</p>}
           </label>
