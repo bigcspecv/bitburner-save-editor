@@ -23,6 +23,7 @@ Web-based editor for Bitburner save files. Upload your save (JSON/base64 or gzip
 - [x] Companies (rep/favor with search and sorting)
 - [x] Factions (membership/invites/rep/favor with search and sorting)
 - [ ] Player
+  - [ ] Identity & Basics
   - [x] Stats & skills
   - [x] Augmentations (installed/queued, NeuroFlux level tracking)
     - [x] Display augmentation effects/benefits
@@ -32,9 +33,9 @@ Web-based editor for Bitburner save files. Upload your save (JSON/base64 or gzip
   - [x] hacknet
     - [x] hacknet nodes
     - [ ] hash manager
-  - [ ] progression
-  - [ ] stock
-  - [ ] feature flags
+  - [ ] progression & timers
+  - [ ] finance & market
+  - [ ] factions & flags
 - [ ] Settings
 - [ ] Staneks
 - [ ] Stock Market
