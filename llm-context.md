@@ -303,3 +303,4 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **2025-11-27** - SearchBar now includes inline clear (×) button to reset queries in all sections
 - **2025-11-27** - NeuroFlux Governor inputs always visible (no more display-only state before click) for clearer editability
 - **2025-11-27** - NeuroFlux Governor levels now use shared NumberInput (with increment/decrement controls) min=0, no max
+- **2025-11-27** - Player tab filter toggle hidden (placeholder button removed; TODO left to restore/remove if filters added)

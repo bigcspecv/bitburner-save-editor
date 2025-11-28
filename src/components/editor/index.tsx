@@ -6,8 +6,6 @@ import { Bitburner } from "bitburner.types";
 import { FileContext } from "App";
 import EditorSection from "components/editor/section";
 
-import { ReactComponent as IconFilter } from "icons/filter.svg";
-
 export default observer(function EditorContainer() {
   const fileContext = useContext(FileContext);
   const navRef = useRef<HTMLElement>();
@@ -55,11 +53,7 @@ export default observer(function EditorContainer() {
               <button property={key} className="px-4 py-2 -b-px font-semibold" value={key} onClick={onClickTab}>
                 {key}
               </button>
-              {activeTab === key && (
-                <button className={clsx(isFiltering && "text-green-700")} onClick={toggleFiltering}>
-                  <IconFilter />
-                </button>
-              )}
+              {/* TODO: remove filter toggle if we never add filters; button hidden for now */}
             </div>
           ))}
         </nav>
