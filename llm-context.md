@@ -310,4 +310,6 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 - **2025-11-28** - Fixed Bitburner namespace runtime export: `bitburner/index.ts` now properly re-exports the namespace and uses `Object.assign()` to extend it with game data constants
 - **2025-11-28** - Checkbox component now uses an invisible overlay input instead of a hidden input so clicks toggle correctly (fixes unresponsive checkboxes across sections, including Servers)
 - **2025-11-28** - Added optional `stopPropagation` to Checkbox and now stop propagation on the label/input to keep collapsed cards from opening when toggling selection (Servers)
+- **2025-11-28** - Added shared `NotImplemented` helper with icon indicator; used across editor sections (player placeholders and default section) to mark unimplemented areas
+- **2025-11-28** - Navigation tabs now show a yellow “not implemented” icon for unbuilt sections (main editor tabs and unimplemented player subtabs)
 - **2025-11-28** - Top editor tabs now show human-readable labels (Player, Factions, Companies, Servers, etc.) instead of SaveDataKey enum names

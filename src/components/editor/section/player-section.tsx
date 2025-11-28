@@ -9,6 +9,8 @@ import { FileContext } from "App";
 import { formatMoney, formatNumber } from "util/format";
 import AugmentationsSection from "./augmentations-section";
 import JobsSection from "./jobs-section";
+import { NotImplemented } from "../not-implemented";
+import { ExclamationCircleIcon } from "@heroicons/react/solid";
 
 export type PlayerDataKey = keyof Bitburner.PlayerSaveObject["data"];
 
@@ -82,6 +84,8 @@ export default observer(function PlayerSection() {
     { key: "meta", label: "Factions & Flags" },
   ];
 
+  const NOT_IMPLEMENTED_TABS: SectionKey[] = ["general", "hacknet", "location", "progression", "finance", "meta"];
+
   const renderSection = () => {
     switch (activeSection) {
       case "stats":
@@ -132,78 +136,72 @@ export default observer(function PlayerSection() {
 
       case "general":
         return (
-          <div className="text-slate-300">
-            <p>Not Implemented</p>
+          <NotImplemented>
             <ul className="list-disc list-inside mt-2 space-y-1">
               {PLACEHOLDER_FIELDS.general.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
-          </div>
+          </NotImplemented>
         );
 
       case "hacknet":
         return (
-          <div className="text-slate-300">
-            <p>Not Implemented</p>
+          <NotImplemented>
             <ul className="list-disc list-inside mt-2 space-y-1">
               {PLACEHOLDER_FIELDS.hacknet.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
-          </div>
+          </NotImplemented>
         );
 
       case "location":
         return (
-          <div className="text-slate-300">
-            <p>Not Implemented</p>
+          <NotImplemented>
             <ul className="list-disc list-inside mt-2 space-y-1">
               {PLACEHOLDER_FIELDS.location.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
-          </div>
+          </NotImplemented>
         );
 
       case "progression":
         return (
-          <div className="text-slate-300">
-            <p>Not Implemented</p>
+          <NotImplemented>
             <ul className="list-disc list-inside mt-2 space-y-1">
               {PLACEHOLDER_FIELDS.progression.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
-          </div>
+          </NotImplemented>
         );
 
       case "finance":
         return (
-          <div className="text-slate-300">
-            <p>Not Implemented</p>
+          <NotImplemented>
             <ul className="list-disc list-inside mt-2 space-y-1">
               {PLACEHOLDER_FIELDS.finance.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
-          </div>
+          </NotImplemented>
         );
 
       case "meta":
         return (
-          <div className="text-slate-300">
-            <p>Not Implemented</p>
+          <NotImplemented>
             <ul className="list-disc list-inside mt-2 space-y-1">
               {PLACEHOLDER_FIELDS.meta.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
-          </div>
+          </NotImplemented>
         );
 
       default:
-        return <div className="text-slate-300">Not Implemented</div>;
+        return <NotImplemented />;
     }
   };
 
@@ -221,7 +219,14 @@ export default observer(function PlayerSection() {
                 : "bg-gray-900 text-slate-400 hover:text-slate-200 hover:bg-gray-800"
             )}
           >
-            {section.label}
+            <span className="flex items-center gap-1">
+              {section.label}
+              {NOT_IMPLEMENTED_TABS.includes(section.key) && (
+                <span title="Not implemented yet">
+                  <ExclamationCircleIcon className="h-4 w-4 text-yellow-500" aria-hidden="true" />
+                </span>
+              )}
+            </span>
           </button>
         ))}
       </div>

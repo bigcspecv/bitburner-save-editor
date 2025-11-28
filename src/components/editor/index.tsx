@@ -5,6 +5,7 @@ import { observer } from "mobx-react-lite";
 import { Bitburner } from "bitburner";
 import { FileContext } from "App";
 import EditorSection from "components/editor/section";
+import { ExclamationCircleIcon } from "@heroicons/react/solid";
 
 const TAB_LABELS: Record<Bitburner.SaveDataKey, string> = {
   [Bitburner.SaveDataKey.PlayerSave]: "Player",
@@ -22,6 +23,13 @@ const TAB_LABELS: Record<Bitburner.SaveDataKey, string> = {
   [Bitburner.SaveDataKey.GoSave]: "Go",
   [Bitburner.SaveDataKey.InfiltrationsSave]: "Infiltrations",
 };
+
+const IMPLEMENTED_TABS: Bitburner.SaveDataKey[] = [
+  Bitburner.SaveDataKey.PlayerSave,
+  Bitburner.SaveDataKey.FactionsSave,
+  Bitburner.SaveDataKey.AllServersSave,
+  Bitburner.SaveDataKey.CompaniesSave,
+];
 
 export default observer(function EditorContainer() {
   const fileContext = useContext(FileContext);
@@ -68,7 +76,14 @@ export default observer(function EditorContainer() {
               key={key}
             >
               <button property={key} className="px-4 py-2 -b-px font-semibold" value={key} onClick={onClickTab}>
-                {TAB_LABELS[key] ?? key}
+                <span className="flex items-center gap-1">
+                  {TAB_LABELS[key] ?? key}
+                  {!IMPLEMENTED_TABS.includes(key as Bitburner.SaveDataKey) && (
+                    <span title="Not implemented yet">
+                      <ExclamationCircleIcon className="h-4 w-4 text-yellow-500" aria-hidden="true" />
+                    </span>
+                  )}
+                </span>
               </button>
               {/* TODO: remove filter toggle if we never add filters; button hidden for now */}
             </div>

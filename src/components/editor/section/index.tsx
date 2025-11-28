@@ -5,6 +5,7 @@ import PlayerSection from "./player-section";
 import FactionSection from "./factions-section";
 import CompaniesSection from "./companies-section";
 import ServersSection from "./servers-section";
+import { NotImplemented } from "../not-implemented";
 
 interface Props {
   tab: Bitburner.SaveDataKey;
@@ -24,7 +25,7 @@ export default class EditorSection extends Component<Props> {
       case Bitburner.SaveDataKey.AllServersSave:
         return <ServersSection {...restProps} />;
       default:
-        return <div>Not Implemented</div>;
+        return <NotImplemented />;
     }
   }
 
