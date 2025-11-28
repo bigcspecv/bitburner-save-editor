@@ -128,8 +128,23 @@ The editor includes hardcoded constants from Bitburner in `src/bitburner.types.t
 - **`ALL_JOB_TITLES`** - All 36 job positions
 - **`COMPANY_JOBS`** - Mapping of which companies offer which jobs
 - **`ALL_AUGMENTATIONS`** - All augmentation names
+- **`AUGMENTATION_DATA`** - Complete metadata for all 145 augmentations including:
+  - Effects/multipliers (29 different stat/ability types)
+  - Descriptions and lore text
+  - Reputation and money costs
+  - Faction availability
+  - Prerequisites
 
 These constants are extracted from the official Bitburner source code and verified for version 2.8.1.
+
+### Augmentation Filtering
+
+The augmentation editor supports filtering by effect types:
+- **Stat filters**: Hacking, Strength, Defense, Dexterity, Agility, Charisma
+- **Reputation filters**: Company Rep, Faction Rep
+- **Activity filters**: Crime, Hacknet, Bladeburner
+
+Each augmentation displays a summary of its primary effects when collapsed, and full description when expanded for editing.
 
 ## Development Workflow
 
@@ -282,3 +297,4 @@ The TODO list is the **single source of truth** for project status. Keep it curr
 
 - **2025-01** - Initial document creation with comprehensive project context
 - **2025-01** - Added LLM agent instructions for maintaining this document and README checklist
+- **2025-01** - Added augmentation metadata system with complete effect data for all 145 augmentations and filtering capabilities

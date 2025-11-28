@@ -26,6 +26,8 @@ Web-based editor for Bitburner save files. Upload your save (JSON/base64 or gzip
   - [x] Money, karma, entropy
   - [x] Stats & skills
   - [x] Augmentations (installed/queued, NeuroFlux level tracking)
+    - [x] Display augmentation effects/benefits
+    - [x] Filter by effect type (hacking, combat stats, reputation, etc.)
   - [x] Exploits
     - [x] Edit Save File (auto-added on load)
   - [x] Jobs

@@ -36,11 +36,40 @@ interface AugmentationData {
   status: AugmentationStatus;
 }
 
+interface ConfirmationDialog {
+  augName: string;
+  newStatus: AugmentationStatus;
+  newLevel: number;
+  affectedAugmentations: Array<{
+    name: string;
+    currentStatus: AugmentationStatus;
+    newStatus: AugmentationStatus;
+  }>;
+}
+
 export default observer(function AugmentationsSection({ isFiltering }: Props) {
   const { player } = useContext(FileContext);
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 500);
-  const [filters, setFilters] = useState<Partial<{ installed: boolean; queued: boolean; none: boolean; level: number }>>({
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmationDialog | null>(null);
+  const [filters, setFilters] = useState<Partial<{
+    installed: boolean;
+    queued: boolean;
+    none: boolean;
+    level: number;
+    // Effect filters
+    hacking: boolean;
+    strength: boolean;
+    defense: boolean;
+    dexterity: boolean;
+    agility: boolean;
+    charisma: boolean;
+    company_rep: boolean;
+    faction_rep: boolean;
+    crime: boolean;
+    hacknet: boolean;
+    bladeburner: boolean;
+  }>>({
     level: -1,
   });
 
@@ -72,11 +101,16 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
     const augMap = new Map<string, AugmentationData>();
 
     // First, add ALL augmentations from the static list with "none" status
-    // Note: These use internal names like "NeuroFluxGovernor" which may not match save file names
+    // Use the display name from AUGMENTATION_DATA if available
     Bitburner.ALL_AUGMENTATIONS.forEach((augName) => {
       // Skip NeuroFlux variants - they're handled separately
       if (augName.includes("NeuroFlux")) return;
-      augMap.set(augName, { name: augName, level: 0, status: "none" });
+
+      // Try to get the proper display name from AUGMENTATION_DATA
+      const augData = Bitburner.AUGMENTATION_DATA[augName];
+      const displayName = augData?.name || augName;
+
+      augMap.set(displayName, { name: displayName, level: 0, status: "none" });
     });
 
     // Collect augmentation names from original save (to track what we started with)
@@ -134,7 +168,48 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
       // Search filter
       const searchMatch = debouncedQuery.length === 0 || aug.name.toLowerCase().indexOf(debouncedQuery.toLowerCase()) >= 0;
 
-      return searchMatch;
+      if (!searchMatch) return false;
+
+      // Effect filters - check if augmentation has the selected effects
+      // First try direct key lookup (without spaces)
+      let augData = Bitburner.AUGMENTATION_DATA[aug.name.replace(/\s+/g, "")];
+      // If not found, search by matching the name property
+      if (!augData) {
+        augData = Object.values(Bitburner.AUGMENTATION_DATA).find(
+          (a) => a.name === aug.name
+        );
+      }
+      if (!augData) return true; // If no data, don't filter out
+
+      const effectsMatch =
+        (!filters.hacking ||
+          augData.multipliers.hacking ||
+          augData.multipliers.hacking_exp ||
+          augData.multipliers.hacking_chance ||
+          augData.multipliers.hacking_speed ||
+          augData.multipliers.hacking_money ||
+          augData.multipliers.hacking_grow) &&
+        (!filters.strength || augData.multipliers.strength || augData.multipliers.strength_exp) &&
+        (!filters.defense || augData.multipliers.defense || augData.multipliers.defense_exp) &&
+        (!filters.dexterity || augData.multipliers.dexterity || augData.multipliers.dexterity_exp) &&
+        (!filters.agility || augData.multipliers.agility || augData.multipliers.agility_exp) &&
+        (!filters.charisma || augData.multipliers.charisma || augData.multipliers.charisma_exp) &&
+        (!filters.company_rep || augData.multipliers.company_rep) &&
+        (!filters.faction_rep || augData.multipliers.faction_rep) &&
+        (!filters.crime || augData.multipliers.crime_money || augData.multipliers.crime_success) &&
+        (!filters.hacknet ||
+          augData.multipliers.hacknet_node_money ||
+          augData.multipliers.hacknet_node_purchase_cost ||
+          augData.multipliers.hacknet_node_ram_cost ||
+          augData.multipliers.hacknet_node_core_cost ||
+          augData.multipliers.hacknet_node_level_cost) &&
+        (!filters.bladeburner ||
+          augData.multipliers.bladeburner_max_stamina ||
+          augData.multipliers.bladeburner_stamina_gain ||
+          augData.multipliers.bladeburner_analysis ||
+          augData.multipliers.bladeburner_success_chance);
+
+      return effectsMatch;
     });
 
     // Sort by level if enabled
@@ -148,8 +223,99 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
     return filtered;
   }, [allAugmentations, filters, debouncedQuery]);
 
-  const onSubmit = useCallback(
-    (augName: string, status: AugmentationStatus, level: number) => {
+  // Helper function to calculate the impact of changing an augmentation's status
+  const calculateImpact = useCallback(
+    (augName: string, newStatus: AugmentationStatus): Array<{
+      name: string;
+      currentStatus: AugmentationStatus;
+      newStatus: AugmentationStatus;
+    }> => {
+      const affected: Array<{
+        name: string;
+        currentStatus: AugmentationStatus;
+        newStatus: AugmentationStatus;
+      }> = [];
+
+      // Only need to check for impacts if we're downgrading or removing
+      if (newStatus !== "installed") {
+        const installedAugs = player.data.augmentations || [];
+        const queuedAugs = player.data.queuedAugmentations || [];
+
+        // Find all augmentations that have this one as a prerequisite
+        const dependentAugs = Bitburner.ALL_AUGMENTATIONS.filter((otherAugName) => {
+          if (otherAugName === augName || otherAugName.includes("NeuroFlux")) return false;
+          const otherAugData = Bitburner.AUGMENTATION_DATA[otherAugName];
+          if (!otherAugData || !otherAugData.prereqs) return false;
+
+          // Check if this augmentation is in the prerequisites (match both key and display name)
+          const augData = Bitburner.AUGMENTATION_DATA[augName.replace(/\s+/g, "")] ||
+                          Object.values(Bitburner.AUGMENTATION_DATA).find(a => a.name === augName);
+          const augKey = Object.keys(Bitburner.AUGMENTATION_DATA).find(
+            key => Bitburner.AUGMENTATION_DATA[key] === augData
+          );
+
+          return otherAugData.prereqs.some(prereq => prereq === augKey || prereq === augName);
+        });
+
+        // For each dependent augmentation, calculate what would happen
+        dependentAugs.forEach((depAugName) => {
+          const depAugData = Bitburner.AUGMENTATION_DATA[depAugName];
+          const depDisplayName = depAugData?.name || depAugName;
+
+          const isInstalled = installedAugs.some(
+            a => a.name === depAugName || a.name === depDisplayName
+          );
+          const isQueued = queuedAugs.some(
+            a => a.name === depAugName || a.name === depDisplayName
+          );
+
+          if (isInstalled) {
+            if (newStatus === "queued") {
+              affected.push({
+                name: depDisplayName,
+                currentStatus: "installed",
+                newStatus: "queued"
+              });
+            } else if (newStatus === "none") {
+              affected.push({
+                name: depDisplayName,
+                currentStatus: "installed",
+                newStatus: "none"
+              });
+            }
+          } else if (isQueued && newStatus === "none") {
+            affected.push({
+              name: depDisplayName,
+              currentStatus: "queued",
+              newStatus: "none"
+            });
+          }
+        });
+      }
+
+      return affected;
+    },
+    [player.data.augmentations, player.data.queuedAugmentations]
+  );
+
+  const applyChange = useCallback(
+    (augName: string, status: AugmentationStatus, level: number, onCancel?: () => void, skipConfirmation = false) => {
+      // Calculate impact
+      const affectedAugs = calculateImpact(augName, status);
+
+      // If there are affected augmentations and we haven't confirmed yet, show dialog
+      if (affectedAugs.length > 0 && !skipConfirmation) {
+        setConfirmDialog({
+          augName,
+          newStatus: status,
+          newLevel: level,
+          affectedAugmentations: affectedAugs
+        });
+        // Store the cancel callback to invoke if user cancels
+        (window as any).__augmentationCancelCallback = onCancel;
+        return;
+      }
+
       // Check if we're resetting to the original state
       const originalInstalled = player.originalData?.augmentations?.find((a) => a.name === augName);
       const originalQueued = player.originalData?.queuedAugmentations?.find((a) => a.name === augName);
@@ -212,13 +378,66 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
 
       console.log(`Augmentation ${augName} updated to status: ${status}, installed count: ${installedAugs.length}, queued count: ${queuedAugs.length}`);
 
+      // Apply cascade changes if confirmed (skipConfirmation means user confirmed or no affected augs)
+      if (skipConfirmation && affectedAugs.length > 0) {
+        affectedAugs.forEach((affected) => {
+          const depInstalledIdx = installedAugs.findIndex(
+            a => a.name === affected.name
+          );
+          const depQueuedIdx = queuedAugs.findIndex(
+            a => a.name === affected.name
+          );
+
+          if (affected.currentStatus === "installed" && depInstalledIdx >= 0) {
+            if (affected.newStatus === "queued") {
+              console.log(`Downgrading ${affected.name} from installed to queued (prerequisite ${augName} is only queued)`);
+              const aug = installedAugs[depInstalledIdx];
+              installedAugs.splice(depInstalledIdx, 1);
+              queuedAugs.push(aug);
+            } else if (affected.newStatus === "none") {
+              console.log(`Removing ${affected.name} (prerequisite ${augName} was removed)`);
+              installedAugs.splice(depInstalledIdx, 1);
+            }
+          } else if (affected.currentStatus === "queued" && depQueuedIdx >= 0 && affected.newStatus === "none") {
+            console.log(`Removing ${affected.name} (prerequisite ${augName} was removed)`);
+            queuedAugs.splice(depQueuedIdx, 1);
+          }
+        });
+      }
+
       player.updatePlayer({
         augmentations: installedAugs,
         queuedAugmentations: queuedAugs,
       });
     },
-    [player]
+    [player, calculateImpact]
   );
+
+  const onSubmit = useCallback(
+    (augName: string, status: AugmentationStatus, level: number, onCancel?: () => void) => {
+      applyChange(augName, status, level, onCancel, false);
+    },
+    [applyChange]
+  );
+
+  const handleConfirmChange = useCallback(() => {
+    if (confirmDialog) {
+      applyChange(confirmDialog.augName, confirmDialog.newStatus, confirmDialog.newLevel, undefined, true);
+      setConfirmDialog(null);
+      // Clear the cancel callback
+      delete (window as any).__augmentationCancelCallback;
+    }
+  }, [confirmDialog, applyChange]);
+
+  const handleCancelChange = useCallback(() => {
+    // Call the cancel callback if it exists
+    const cancelCallback = (window as any).__augmentationCancelCallback;
+    if (cancelCallback) {
+      cancelCallback();
+      delete (window as any).__augmentationCancelCallback;
+    }
+    setConfirmDialog(null);
+  }, []);
 
   const onUpdateNeuroFlux = useCallback(
     (installedLevel: number, queuedLevel: number) => {
@@ -370,19 +589,78 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
                 placeholder="Search Augmentations..."
               />
             </label>
-            <label className="inline-flex items-center text-slate-100">
-              <Checkbox onChange={onEditFilters} data-key="installed" checked={filters.installed ?? false} />
-              <span className="ml-2">Installed</span>
-            </label>
-            <label className="inline-flex items-center text-slate-100">
-              <Checkbox onChange={onEditFilters} data-key="queued" checked={filters.queued ?? false} />
-              <span className="ml-2">Queued</span>
-            </label>
-            <label className="inline-flex items-center text-slate-100">
-              <Checkbox onChange={onEditFilters} data-key="none" checked={filters.none ?? false} />
-              <span className="ml-2">Not Owned</span>
-            </label>
           </div>
+
+          {/* Status Filters */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-green-300 mb-2">Status</h4>
+            <div className="flex gap-4 flex-wrap">
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="installed" checked={filters.installed ?? false} />
+                <span className="ml-2">Installed</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="queued" checked={filters.queued ?? false} />
+                <span className="ml-2">Queued</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="none" checked={filters.none ?? false} />
+                <span className="ml-2">Not Owned</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Effect Filters */}
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-green-300 mb-2">Filter by Effects</h4>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="hacking" checked={filters.hacking ?? false} />
+                <span className="ml-2">Hacking</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="strength" checked={filters.strength ?? false} />
+                <span className="ml-2">Strength</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="defense" checked={filters.defense ?? false} />
+                <span className="ml-2">Defense</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="dexterity" checked={filters.dexterity ?? false} />
+                <span className="ml-2">Dexterity</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="agility" checked={filters.agility ?? false} />
+                <span className="ml-2">Agility</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="charisma" checked={filters.charisma ?? false} />
+                <span className="ml-2">Charisma</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="company_rep" checked={filters.company_rep ?? false} />
+                <span className="ml-2">Company Rep</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="faction_rep" checked={filters.faction_rep ?? false} />
+                <span className="ml-2">Faction Rep</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="crime" checked={filters.crime ?? false} />
+                <span className="ml-2">Crime</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="hacknet" checked={filters.hacknet ?? false} />
+                <span className="ml-2">Hacknet</span>
+              </label>
+              <label className="inline-flex items-center text-slate-100">
+                <Checkbox onChange={onEditFilters} data-key="bladeburner" checked={filters.bladeburner ?? false} />
+                <span className="ml-2">Bladeburner</span>
+              </label>
+            </div>
+          </div>
+
           <div className="mb-4 flex gap-4">
             <button
               className={clsx("flex items-center justify-center", !filters.level && "opacity-25")}
@@ -418,10 +696,68 @@ export default observer(function AugmentationsSection({ isFiltering }: Props) {
                 originalStatus={originalStatus}
                 originalLevel={originalLevel}
                 onSubmit={onSubmit}
+                onCalculateImpact={(augName, newStatus) => calculateImpact(augName, newStatus).length}
+                installedAugmentations={player.data.augmentations || []}
+                queuedAugmentations={player.data.queuedAugmentations || []}
               />
             );
           })}
         </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-50"
+            onClick={handleCancelChange}
+          />
+
+          {/* Dialog */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-gray-900 border-2 border-yellow-500 rounded-lg shadow-2xl p-6 max-w-2xl w-full mx-4">
+            <h3 className="text-xl font-bold text-yellow-300 mb-4">
+              Confirm Prerequisite Change
+            </h3>
+
+            <div className="text-slate-100 mb-4">
+              <p className="mb-2">
+                Changing <span className="font-semibold text-green-300">{confirmDialog.augName}</span> to{" "}
+                <span className="font-semibold text-green-300">{confirmDialog.newStatus}</span> will affect the following augmentations:
+              </p>
+
+              <div className="bg-gray-800 rounded p-4 max-h-64 overflow-y-auto">
+                {confirmDialog.affectedAugmentations.map((affected, index) => (
+                  <div key={index} className="mb-2 pb-2 border-b border-gray-700 last:border-b-0">
+                    <div className="font-semibold text-slate-200">{affected.name}</div>
+                    <div className="text-sm text-slate-400">
+                      Status: <span className="text-yellow-400">{affected.currentStatus}</span>
+                      {" → "}
+                      <span className={affected.newStatus === "none" ? "text-red-400" : "text-yellow-400"}>
+                        {affected.newStatus}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-4 justify-end">
+              <button
+                onClick={handleCancelChange}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmChange}
+                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded transition-colors"
+              >
+                Confirm Changes
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
@@ -433,7 +769,10 @@ interface AugmentationProps extends PropsWithChildren<{}> {
   status: AugmentationStatus;
   originalStatus: AugmentationStatus;
   originalLevel: number;
-  onSubmit(name: string, status: AugmentationStatus, level: number): void;
+  onSubmit(name: string, status: AugmentationStatus, level: number, onCancel?: () => void): void;
+  onCalculateImpact(name: string, newStatus: AugmentationStatus): number; // Returns count of affected augmentations
+  installedAugmentations: Array<{ name: string; level: number }>;
+  queuedAugmentations: Array<{ name: string; level: number }>;
 }
 
 const Augmentation = function Augmentation({
@@ -443,24 +782,58 @@ const Augmentation = function Augmentation({
   originalStatus,
   originalLevel,
   onSubmit,
+  onCalculateImpact,
+  installedAugmentations,
+  queuedAugmentations,
 }: AugmentationProps) {
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState({ status, level });
   const [pendingSave, setPendingSave] = useState(false);
+  const [pendingRevert, setPendingRevert] = useState(false);
+  const [pendingResetTarget, setPendingResetTarget] = useState<{ status: AugmentationStatus; level: number } | null>(null);
+
+  // Get augmentation data
+  const augData = useMemo(() => {
+    // First try direct key lookup (without spaces)
+    const directLookup = Bitburner.AUGMENTATION_DATA[name.replace(/\s+/g, "")];
+    if (directLookup) return directLookup;
+
+    // If not found, search by matching the name property
+    const entry = Object.values(Bitburner.AUGMENTATION_DATA).find(
+      (aug) => aug.name === name
+    );
+    return entry;
+  }, [name]);
 
   // Sync state when props change
   useEffect(() => {
     setState({ status, level });
-  }, [status, level]);
+
+    // If we had a pending reset and the props now match the target, clear it
+    if (pendingResetTarget && status === pendingResetTarget.status && level === pendingResetTarget.level) {
+      setPendingResetTarget(null);
+    }
+  }, [status, level, pendingResetTarget]);
+
+  // Revert UI state when user cancels
+  useEffect(() => {
+    if (pendingRevert) {
+      setState({ status, level });
+      setPendingRevert(false);
+    }
+  }, [pendingRevert, status, level]);
 
   // Save when pendingSave flag is set
   useEffect(() => {
-    if (pendingSave && editing) {
+    if (pendingSave) {
       const finalLevel = Math.max(1, Math.min(Number.MAX_SAFE_INTEGER, Number(state.level)));
-      onSubmit(name, state.status, finalLevel);
+      const handleCancel = () => {
+        setPendingRevert(true);
+      };
+      onSubmit(name, state.status, finalLevel, handleCancel);
       setPendingSave(false);
     }
-  }, [pendingSave, editing, state, name, onSubmit]);
+  }, [pendingSave, state, name, onSubmit]);
 
   // Check if augmentation has changed from original
   // Only status matters since level is always 1 for regular augmentations
@@ -469,13 +842,139 @@ const Augmentation = function Augmentation({
     return currentStatus !== originalStatus;
   }, [editing, state.status, status, originalStatus]);
 
+  // Format multiplier value for display
+  const formatMultiplier = (value: number | undefined) => {
+    if (value === undefined) return null;
+    const percent = ((value - 1) * 100).toFixed(1);
+    return value >= 1 ? `+${percent}%` : `${percent}%`;
+  };
+
+  // Check prerequisites
+  const prerequisiteStatus = useMemo(() => {
+    if (!augData || !augData.prereqs || augData.prereqs.length === 0) {
+      return { hasPrereqs: false, allOwned: true, allInstalled: true, prereqs: [] };
+    }
+
+    const prereqStatuses = augData.prereqs.map((prereqKey) => {
+      // Convert the internal key to a display name
+      const prereqData = Bitburner.AUGMENTATION_DATA[prereqKey];
+      const prereqDisplayName = prereqData?.name || prereqKey;
+
+      // Check if prerequisite is installed or queued using BOTH the key and display name
+      const isInstalled = installedAugmentations.some(
+        (a) => a.name === prereqKey || a.name === prereqDisplayName
+      );
+      const isQueued = queuedAugmentations.some(
+        (a) => a.name === prereqKey || a.name === prereqDisplayName
+      );
+
+      return {
+        name: prereqDisplayName,
+        installed: isInstalled,
+        queued: isQueued,
+        owned: isInstalled || isQueued,
+      };
+    });
+
+    return {
+      hasPrereqs: true,
+      allOwned: prereqStatuses.every((p) => p.owned),
+      allInstalled: prereqStatuses.every((p) => p.installed),
+      prereqs: prereqStatuses,
+    };
+  }, [augData, installedAugmentations, queuedAugmentations]);
+
+  // Get effect list for detailed view
+  const effectsList = useMemo(() => {
+    if (!augData) return [];
+    const effects: string[] = [];
+    const m = augData.multipliers;
+
+    // Stats
+    if (m.hacking) effects.push(`${formatMultiplier(m.hacking)} hacking skill`);
+    if (m.strength) effects.push(`${formatMultiplier(m.strength)} strength skill`);
+    if (m.defense) effects.push(`${formatMultiplier(m.defense)} defense skill`);
+    if (m.dexterity) effects.push(`${formatMultiplier(m.dexterity)} dexterity skill`);
+    if (m.agility) effects.push(`${formatMultiplier(m.agility)} agility skill`);
+    if (m.charisma) effects.push(`${formatMultiplier(m.charisma)} charisma skill`);
+
+    // Exp multipliers
+    if (m.hacking_exp) effects.push(`${formatMultiplier(m.hacking_exp)} hacking exp`);
+    if (m.strength_exp) effects.push(`${formatMultiplier(m.strength_exp)} strength exp`);
+    if (m.defense_exp) effects.push(`${formatMultiplier(m.defense_exp)} defense exp`);
+    if (m.dexterity_exp) effects.push(`${formatMultiplier(m.dexterity_exp)} dexterity exp`);
+    if (m.agility_exp) effects.push(`${formatMultiplier(m.agility_exp)} agility exp`);
+    if (m.charisma_exp) effects.push(`${formatMultiplier(m.charisma_exp)} charisma exp`);
+
+    // Hacking abilities
+    if (m.hacking_speed) effects.push(`${formatMultiplier(m.hacking_speed)} faster hack(), grow(), and weaken()`);
+    if (m.hacking_chance) effects.push(`${formatMultiplier(m.hacking_chance)} hack() success chance`);
+    if (m.hacking_money) effects.push(`${formatMultiplier(m.hacking_money)} hack() power`);
+    if (m.hacking_grow) effects.push(`${formatMultiplier(m.hacking_grow)} grow() power`);
+
+    // Reputation
+    if (m.company_rep) effects.push(`${formatMultiplier(m.company_rep)} reputation from companies`);
+    if (m.faction_rep) effects.push(`${formatMultiplier(m.faction_rep)} reputation from factions`);
+
+    // Crime
+    if (m.crime_money) effects.push(`${formatMultiplier(m.crime_money)} crime money`);
+    if (m.crime_success) effects.push(`${formatMultiplier(m.crime_success)} crime success rate`);
+
+    // Work
+    if (m.work_money) effects.push(`${formatMultiplier(m.work_money)} work money`);
+
+    // Hacknet
+    if (m.hacknet_node_money) effects.push(`${formatMultiplier(m.hacknet_node_money)} hacknet production`);
+    if (m.hacknet_node_purchase_cost) {
+      const percent = ((1 - m.hacknet_node_purchase_cost) * 100).toFixed(1);
+      effects.push(`-${percent}% hacknet purchase cost`);
+    }
+    if (m.hacknet_node_level_cost) {
+      const percent = ((1 - m.hacknet_node_level_cost) * 100).toFixed(1);
+      effects.push(`-${percent}% hacknet level upgrade cost`);
+    }
+    if (m.hacknet_node_ram_cost) {
+      const percent = ((1 - m.hacknet_node_ram_cost) * 100).toFixed(1);
+      effects.push(`-${percent}% hacknet RAM upgrade cost`);
+    }
+    if (m.hacknet_node_core_cost) {
+      const percent = ((1 - m.hacknet_node_core_cost) * 100).toFixed(1);
+      effects.push(`-${percent}% hacknet core upgrade cost`);
+    }
+
+    // Bladeburner
+    if (m.bladeburner_max_stamina) effects.push(`${formatMultiplier(m.bladeburner_max_stamina)} Bladeburner Max Stamina`);
+    if (m.bladeburner_stamina_gain) effects.push(`${formatMultiplier(m.bladeburner_stamina_gain)} Bladeburner Stamina gain`);
+    if (m.bladeburner_analysis) effects.push(`${formatMultiplier(m.bladeburner_analysis)} Bladeburner Field Analysis effectiveness`);
+    if (m.bladeburner_success_chance) effects.push(`${formatMultiplier(m.bladeburner_success_chance)} Bladeburner action success chance`);
+
+    return effects;
+  }, [augData]);
+
   const handleRevert = useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation();
-      onSubmit(name, originalStatus, originalLevel);
-      setState({ status: originalStatus, level: originalLevel });
+
+      // Check if this reset will affect other augmentations
+      const affectedCount = onCalculateImpact(name, originalStatus);
+
+      if (affectedCount > 0) {
+        // Will need confirmation - don't update UI yet, just submit
+        // Store the target so we know we're waiting for confirmation
+        setPendingResetTarget({ status: originalStatus, level: originalLevel });
+
+        const handleCancel = () => {
+          // User cancelled - clear the pending reset
+          setPendingResetTarget(null);
+        };
+        onSubmit(name, originalStatus, originalLevel, handleCancel);
+      } else {
+        // No confirmation needed - update UI immediately
+        setState({ status: originalStatus, level: originalLevel });
+        onSubmit(name, originalStatus, originalLevel);
+      }
     },
-    [name, originalStatus, originalLevel, onSubmit]
+    [name, originalStatus, originalLevel, onSubmit, onCalculateImpact]
   );
 
   const onClickEnter = useCallback<MouseEventHandler<HTMLDivElement>>((event) => {
@@ -509,65 +1008,231 @@ const Augmentation = function Augmentation({
     <>
       <div
         className={clsx(
-          "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-2 rounded border shadow row-span-2 h-10 overflow-hidden",
+          "transition-colors duration-200 ease-in-out relative inline-flex flex-col p-2 rounded border shadow row-span-2",
+          editing ? "overflow-hidden" : "overflow-visible",
           hasChanged ? "border-yellow-500 shadow-yellow-700" : "border-gray-700 shadow-green-700",
           "hover:bg-gray-800 focus-within:bg-gray-800",
-          editing && "z-20 h-auto",
+          editing ? "z-20 h-auto" : "h-10",
           hasValues && !editing && "bg-gray-800/50"
         )}
         onClick={!editing ? onClickEnter : undefined}
       >
         <form className="grid grid-cols-2 gap-1" data-id="augmentation-section" onSubmit={onClose}>
-          <header className="col-span-2 flex items-baseline justify-between">
-            <h3 className={clsx("tracking-wide text-sm", hasValues ? "text-green-300" : "text-green-100")} title={name}>
-              {name}
-            </h3>
-            <div className="flex items-center gap-2">
-              {hasChanged && (
-                <button
-                  type="button"
-                  onClick={handleRevert}
-                  className="px-2 py-0.5 text-xs rounded bg-yellow-600 hover:bg-yellow-500 text-white"
-                  title="Reset to original value"
-                >
-                  Reset
-                </button>
-              )}
+          {/* Collapsed view - single line with name, dropdown, and reset button */}
+          {!editing && (
+            <div className="col-span-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h3 className={clsx("tracking-wide text-sm truncate", hasValues ? "text-green-300" : "text-green-100")} title={name}>
+                  {name}
+                </h3>
+                {/* Prerequisites indicator - collapsed view */}
+                {prerequisiteStatus.hasPrereqs && (
+                  <div className="relative group flex-shrink-0">
+                    <div
+                      className={clsx(
+                        "flex items-center justify-center w-4 h-4 rounded-full border",
+                        prerequisiteStatus.allOwned
+                          ? "bg-green-900 border-green-500"
+                          : "bg-red-900 border-red-500"
+                      )}
+                      title={prerequisiteStatus.allOwned ? "Prerequisites Owned" : "Missing Prerequisites"}
+                    >
+                      {prerequisiteStatus.allOwned ? (
+                        <span className="text-green-300 text-[10px] font-bold">✓</span>
+                      ) : (
+                        <span className="text-red-300 text-[10px] font-bold">✗</span>
+                      )}
+                    </div>
+                    {/* Tooltip */}
+                    <div className="absolute left-0 top-5 hidden group-hover:block z-[100] bg-gray-900 border border-gray-700 rounded p-2 shadow-lg min-w-[200px]">
+                      <div className="text-xs font-semibold text-green-300 mb-1">Prerequisites:</div>
+                      {prerequisiteStatus.prereqs.map((prereq, i) => (
+                        <div key={i} className="text-xs text-slate-300 flex items-center gap-1">
+                          {prereq.installed ? (
+                            <span className="text-green-400">✓</span>
+                          ) : prereq.queued ? (
+                            <span className="text-yellow-400">Q</span>
+                          ) : (
+                            <span className="text-red-400">✗</span>
+                          )}
+                          <span>{prereq.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <label onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={state.status}
+                    onChange={onStatusChange}
+                    disabled={prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allOwned && state.status === "none"}
+                    className={clsx(
+                      "text-slate-100 px-2 py-1 rounded border outline-none text-xs",
+                      prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allOwned && state.status === "none"
+                        ? "bg-gray-800 border-gray-600 cursor-not-allowed opacity-50"
+                        : "bg-gray-900 border-transparent hover:bg-gray-800 cursor-pointer"
+                    )}
+                    title={prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allOwned && state.status === "none" ? "Prerequisites not met" : ""}
+                  >
+                    <option value="none" className="bg-gray-900 text-slate-100">
+                      None
+                    </option>
+                    <option
+                      value="queued"
+                      className="bg-gray-900 text-slate-100"
+                      disabled={prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allOwned}
+                    >
+                      Queued
+                    </option>
+                    <option
+                      value="installed"
+                      className="bg-gray-900 text-slate-100"
+                      disabled={prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allInstalled}
+                    >
+                      Installed
+                    </option>
+                  </select>
+                </label>
+                {hasChanged && (
+                  <button
+                    type="button"
+                    onClick={handleRevert}
+                    className="px-2 py-0.5 text-xs rounded bg-yellow-600 hover:bg-yellow-500 text-white"
+                    title="Reset to original value"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
             </div>
-          </header>
-          <label
-            className={clsx("flex items-center gap-2", editing ? "col-span-2 mb-2" : "col-span-2")}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {editing && <span className="text-sm text-slate-300">Status:</span>}
-            <select
-              value={state.status}
-              onChange={onStatusChange}
-              className={clsx(
-                "text-slate-100 px-2 py-1 rounded border outline-none cursor-pointer",
-                editing
-                  ? "flex-1 bg-gray-900 border-gray-700 hover:bg-gray-800 focus:bg-gray-800"
-                  : "bg-gray-900 border-transparent text-xs"
+          )}
+
+          {/* Expanded view - show all details */}
+          {editing && (
+            <>
+              {/* Header with title, status, and reset button on same line */}
+              <div className="col-span-2 flex items-center justify-between gap-4 mb-3">
+                <div className="flex items-center gap-2 flex-1">
+                  <h3 className={clsx("tracking-wide text-sm font-semibold", hasValues ? "text-green-300" : "text-green-100")} title={name}>
+                    {name}
+                  </h3>
+                  {/* Prerequisites indicator */}
+                  {prerequisiteStatus.hasPrereqs && (
+                    <div className="relative group">
+                      <div
+                        className={clsx(
+                          "flex items-center justify-center w-5 h-5 rounded-full border-2",
+                          prerequisiteStatus.allOwned
+                            ? "bg-green-900 border-green-500"
+                            : "bg-red-900 border-red-500"
+                        )}
+                        title={prerequisiteStatus.allOwned ? "Prerequisites Owned" : "Missing Prerequisites"}
+                      >
+                        {prerequisiteStatus.allOwned ? (
+                          <span className="text-green-300 text-xs font-bold">✓</span>
+                        ) : (
+                          <span className="text-red-300 text-xs font-bold">✗</span>
+                        )}
+                      </div>
+                      {/* Tooltip */}
+                      <div className="absolute left-0 top-6 hidden group-hover:block z-30 bg-gray-900 border border-gray-700 rounded p-2 shadow-lg min-w-[200px]">
+                        <div className="text-xs font-semibold text-green-300 mb-1">Prerequisites:</div>
+                        {prerequisiteStatus.prereqs.map((prereq, i) => (
+                          <div key={i} className="text-xs text-slate-300 flex items-center gap-1">
+                            {prereq.installed ? (
+                              <span className="text-green-400">✓</span>
+                            ) : prereq.queued ? (
+                              <span className="text-yellow-400">Q</span>
+                            ) : (
+                              <span className="text-red-400">✗</span>
+                            )}
+                            <span>{prereq.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <label className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-xs text-slate-300">Status:</span>
+                    <select
+                      value={state.status}
+                      onChange={onStatusChange}
+                      disabled={prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allOwned && state.status === "none"}
+                      className={clsx(
+                        "text-slate-100 px-2 py-1 rounded border outline-none text-xs",
+                        prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allOwned && state.status === "none"
+                          ? "bg-gray-800 border-gray-600 cursor-not-allowed opacity-50"
+                          : "bg-gray-900 border-gray-700 hover:bg-gray-800 focus:bg-gray-800 cursor-pointer"
+                      )}
+                      title={prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allOwned && state.status === "none" ? "Prerequisites not met" : ""}
+                    >
+                      <option value="none" className="bg-gray-900 text-slate-100">
+                        None
+                      </option>
+                      <option
+                        value="queued"
+                        className="bg-gray-900 text-slate-100"
+                        disabled={prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allOwned}
+                      >
+                        Queued
+                      </option>
+                      <option
+                        value="installed"
+                        className="bg-gray-900 text-slate-100"
+                        disabled={prerequisiteStatus.hasPrereqs && !prerequisiteStatus.allInstalled}
+                      >
+                        Installed
+                      </option>
+                    </select>
+                  </label>
+                  {hasChanged && (
+                    <button
+                      type="button"
+                      onClick={handleRevert}
+                      className="px-2 py-0.5 text-xs rounded bg-yellow-600 hover:bg-yellow-500 text-white"
+                      title="Reset to original value"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Description */}
+              {augData && (
+                <div className="col-span-2 mb-3 text-xs text-slate-300 leading-relaxed max-h-24 overflow-y-auto">
+                  {augData.info}
+                  {augData.stats && (
+                    <div className="mt-2 text-slate-400 italic">{augData.stats}</div>
+                  )}
+                </div>
               )}
-            >
-              <option value="none" className="bg-gray-900 text-slate-100">
-                None
-              </option>
-              <option value="queued" className="bg-gray-900 text-slate-100">
-                Queued
-              </option>
-              <option value="installed" className="bg-gray-900 text-slate-100">
-                Installed
-              </option>
-            </select>
-          </label>
+
+              {/* Effects list */}
+              {effectsList.length > 0 && (
+                <div className="col-span-2">
+                  <div className="text-xs font-semibold text-green-300 mb-1">Effects:</div>
+                  <div className="text-xs text-slate-300 leading-relaxed max-h-40 overflow-y-auto">
+                    {effectsList.map((effect, i) => (
+                      <div key={i}>{effect}</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           <button type="submit" className="hidden" />
         </form>
       </div>
       <div
         className={clsx(
-          "z-10 absolute inset-0 bg-gray-900 transition-opacity duration-200 ease-in-out",
-          editing ? "opacity-50" : "opacity-0 pointer-events-none"
+          "fixed inset-0 bg-gray-900 transition-opacity duration-200 ease-in-out",
+          editing ? "opacity-50 z-10" : "opacity-0 pointer-events-none -z-10"
         )}
         onClick={onClose}
       />
@@ -676,9 +1341,7 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
       >
         <form className="flex flex-col gap-4" data-id="neuroflux-section" onSubmit={onClose}>
           <div className="flex items-baseline justify-between">
-            <p className="text-sm text-slate-300">
-              NeuroFlux Governor is unique - each level is a separate augmentation entry in the save file.
-            </p>
+            <h3 className="text-sm font-semibold text-green-300">NeuroFlux Governor</h3>
             {hasChanged && (
               <button
                 type="button"
@@ -689,6 +1352,14 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
                 Reset
               </button>
             )}
+          </div>
+
+          {/* Description */}
+          <div className="text-xs text-slate-300 leading-relaxed">
+            {Bitburner.AUGMENTATION_DATA.NeuroFluxGovernor.info}
+            <div className="mt-2 text-slate-400 italic">
+              {Bitburner.AUGMENTATION_DATA.NeuroFluxGovernor.stats}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -757,8 +1428,8 @@ const NeuroFluxGovernor = function NeuroFluxGovernor({
       </div>
       <div
         className={clsx(
-          "z-10 absolute inset-0 bg-gray-900 transition-opacity duration-200 ease-in-out",
-          editing ? "opacity-50" : "opacity-0 pointer-events-none"
+          "fixed inset-0 bg-gray-900 transition-opacity duration-200 ease-in-out",
+          editing ? "opacity-50 z-10" : "opacity-0 pointer-events-none -z-10"
         )}
         onClick={onClose}
       />
